@@ -5,8 +5,8 @@
  * @Last Modified time: 2019-08-27 19:38:39
 */
 
-import Bullet from "./Bullet";
-import { Tower, Invator, Adam } from "./Living";
+import { Bullet_props, BulletA, BulletB } from "./Bullet";
+import { TowerProps, InvatorProps, Adam } from "./Living";
 import React, { Component } from "react";
 
 var System: Game | null = null;
@@ -15,22 +15,23 @@ export enum Game_State {
     going, end
 }
 
-const map: Array<props_game> = [
-    {
-        map_pic: '',
-        map_arr: 6,
-        map_cor: 12,
-        margin: [180, 0, 100, 0],
-        padding: [240, 120]
-    }
-];
+// const map: Array<props_game> = [
+//     {
+//         map_pic: '',
+//         map_arr: 6,
+//         map_cor: 12,
+//         margin: [180, 0, 100, 0],
+//         padding: [240, 120]
+//     }
+// ];
 
 export interface state_game {
     gameState: Game_State;
 
-    towers: Array<Tower>;
-    enemies: Array<Invator>;
-    flyingItems: Array<Bullet>;
+    towers: Array<TowerProps>;
+    enemies: Array<InvatorProps>;
+    flyingItems: Array<Bullet_props>;
+    set: Array< Array<boolean> >;
 }
 
 export interface props_game {
@@ -47,7 +48,13 @@ export class Game extends Component<props_game, state_game, any> {
 
         towers: [],
         enemies: [],
-        flyingItems: []
+        flyingItems: [],
+        set: [[false, false, false, false, false, false, false, false, false, false, false, false], 
+            [false, false, false, false, false, false, false, false, false, false, false, false], 
+            [false, false, false, false, false, false, false, false, false, false, false, false],
+            [false, false, false, false, false, false, false, false, false, false, false, false], 
+            [false, false, false, false, false, false, false, false, false, false, false, false], 
+            [false, false, false, false, false, false, false, false, false, false, false, false]]
     };
 
     public getArr: () => number = () => this.props.map_arr;
@@ -59,57 +66,92 @@ export class Game extends Component<props_game, state_game, any> {
             / this.props.map_cor;
     }
 
+    private tower_count: number = 0;
+    private bullet_count: number = 0;
+
+    public getLineHeight: () => number
+        = () => (864 - this.props.margin[0] - this.props.margin[2]) / this.props.map_arr;
+
     private init: () => void
         = () => {
             this.setState({
                 gameState: Game_State.going,
                 towers: [],
                 enemies: [],
-                flyingItems: []
+                flyingItems: [],
+                set: [[false, false, false, false, false, false, false, false, false, false, false, false], 
+                    [false, false, false, false, false, false, false, false, false, false, false, false], 
+                    [false, false, false, false, false, false, false, false, false, false, false, false],
+                    [false, false, false, false, false, false, false, false, false, false, false, false], 
+                    [false, false, false, false, false, false, false, false, false, false, false, false], 
+                    [false, false, false, false, false, false, false, false, false, false, false, false]]
             });
         }
     
     private constructor(props: props_game) {
         super(props);
+        this.state = {
+            gameState: Game_State.going,
+    
+            towers: [],
+            enemies: [],
+            flyingItems: [],
+            set: [[false, false, false, false, false, false, false, false, false, false, false, false], 
+                [false, false, false, false, false, false, false, false, false, false, false, false], 
+                [false, false, false, false, false, false, false, false, false, false, false, false],
+                [false, false, false, false, false, false, false, false, false, false, false, false], 
+                [false, false, false, false, false, false, false, false, false, false, false, false], 
+                [false, false, false, false, false, false, false, false, false, false, false, false]]
+        };
+        this.getArr = this.getArr.bind(this);
+        this.getCor = this.getCor.bind(this);
+        this.getMargin = this.getMargin.bind(this);
+        this.getPadding = this.getPadding.bind(this);
+        this.getSpan = this.getSpan.bind(this);
+        this.init = this.init.bind(this);
+        this.appendTower = this.appendTower.bind(this);
+        this.appendInvator = this.appendInvator.bind(this);
+        this.appendBullet = this.appendBullet.bind(this);
+        this.update = this.update.bind(this);
+
+        this.TEST_ADAM = this.TEST_ADAM.bind(this);
+
+        System = this;
     }
 
     public static start(): Game {
         if (System === null) {
-            System = new Game(map[0]);
+            System = new Game({map_pic: '', map_arr: 6, map_cor: 12, margin: [180, 0, 100, 0], padding: [240, 120]});
         }
         return System!;
     }
 
-    public append(item: Tower | Invator | Bullet): boolean {
-        switch (true) {
-            case item instanceof Tower:
-                let towers_update: Array<Tower> = this.state.towers;
-                if (item instanceof Tower) {
-                    towers_update.push(item);
-                }
-                this.setState({
-                    towers: towers_update
-                });
-                break;
-            case item instanceof Invator:
-                let enemies_update: Array<Invator> = this.state.enemies;
-                if (item instanceof Invator) {
-                    enemies_update.push(item);
-                }
-                this.setState({
-                    enemies: enemies_update
-                });
-                break;
-            case item instanceof Bullet:
-                let flyingItems_update: Array<Bullet> = this.state.flyingItems;
-                if (item instanceof Bullet) {
-                    flyingItems_update.push(item);
-                }
-                this.setState({
-                    flyingItems: flyingItems_update
-                });
-                break;
-        }
+    public appendTower(item: TowerProps): boolean {
+        let towers_update: Array<TowerProps> = this.state.towers;
+        towers_update.push(item);
+        this.setState({
+            towers: towers_update
+        });
+        this.tower_count++;
+        return true;
+    }
+
+    public appendInvator(item: InvatorProps): boolean {
+        let enemies_update: Array<InvatorProps> = this.state.enemies;
+        enemies_update.push(item);
+        this.setState({
+            enemies: enemies_update
+        });
+        return true;
+    }
+
+    public appendBullet(item: Bullet_props): boolean {
+        let flyingItems_update: Array<Bullet_props> = this.state.flyingItems;
+        flyingItems_update.push(item);
+        this.setState({
+            flyingItems: flyingItems_update
+        });
+        this.bullet_count++;
         return true;
     }
 
@@ -123,6 +165,14 @@ export class Game extends Component<props_game, state_game, any> {
                 rect.push([i, j]);
             }
         }
+
+        // console.log(this.state.flyingItems);
+        // this.state.flyingItems.forEach(e => {
+        //     console.log(this.props.margin[3] + this.props.padding[0] + e.getPosition()[0],
+        //         this.props.margin[0] + e.getPosition()[1] * span_height);
+        // });
+        // console.log(this.state.towers);
+
         return (
             <svg xmlns={`http://www.w3.org/2000/svg`} width={`1534px`} height={`862px`} style={{border: `1px solid black`}}>
                 <image xmlns={`http://www.w3.org/2000/svg`} x={0} y={-1} width={`1536px`} height={`864px`}
@@ -136,8 +186,9 @@ export class Game extends Component<props_game, state_game, any> {
                             <rect x={this.props.margin[3] + this.props.padding[0] + e[1] * span_width}
                                 y={this.props.margin[0] + e[0] * span_height}
                                 width={span_width} height={span_height}
-                                style={{fill: `rgba(225, 100, 100, ${Math.random() * 0.1 + 0.1})`,
+                                style={{fill: `rgba(225, 100, 100, 0.2)`,
                                     stroke: `rgba(225, 225, 100, 0.8)`}} key={`rect${e[0]}-${e[1]}`}
+                                onClick={this.TEST_ADAM.bind(this, e[0], e[1])}
                             />
                         );
                     })
@@ -145,36 +196,37 @@ export class Game extends Component<props_game, state_game, any> {
                 {
                     this.state.towers.map(e => {
                         return (
-                            <circle
-                                cx={this.props.margin[3] + this.props.padding[0] + (e.getPosition()[1] + 0.5) * span_width}
-                                cy={this.props.margin[0] + (e.getPosition()[0] + 0.5) * span_height}
-                                r={20} key={`tower${e.getPosition()[0]}-${e.getPosition()[1]}`}
-                                style={{fill: `rgba(225, 100, 225, ${Math.random() * 0.3 + 0.6})`}}
-                            />
+                            e.name === 'Adam'
+                                ? <Adam name={'Adam'} life={e.life} armor={e.armor}
+                                    physical_dec={e.physical_dec} fire_resist={e.fire_resist} cold_resist={e.cold_resist}
+                                    electric_resist={e.electric_resist} magic_dec={e.magic_dec}
+                                    arr={e.arr} cor={e.cor} key={e.id} level={e.level}
+                                    update={this.update} id={Math.random()} />
+                                : null
                         )
                     })
                 }
                 {
-                    this.state.enemies.map(e => {
-                        return (
-                            <circle
-                                cx={this.props.margin[3] + this.props.padding[0] + (e.getPosition()[1] + 0.5) * span_width}
-                                cy={this.props.margin[0] + (e.getPosition()[0] + 0.5) * span_height}
-                                r={20} key={`enemy${parseInt((Math.random() * 1e5).toString())}`}
-                                style={{fill: `rgba(100, 225, 225, ${Math.random() * 0.3 + 0.6})`}}
-                            />
-                        )
-                    })
+                    // this.state.enemies.map((e, index) => {
+                    //     return (
+                    //         <circle
+                    //             cx={e.getPosition()[0]}
+                    //             cy={e.getPosition()[1]}
+                    //             r={36} key={`enemy${index}`}
+                    //             style={{fill: `rgba(100, 225, 225, 1})`}}
+                    //         />
+                    //     )
+                    // })
                 }
                 {
                     this.state.flyingItems.map(e => {
                         return (
-                            <circle
-                                cx={this.props.margin[3] + this.props.padding[0] + (e.getPosition()[1] + 0.5) * span_width}
-                                cy={this.props.margin[0] + (e.getPosition()[0] + 0.5) * span_height}
-                                r={5} key={`flying${parseInt((Math.random() * 1e5).toString())}`}
-                                style={{fill: `rgba(225, 100, 225, ${Math.random() * 0.3 + 0.6})`}}
-                            />
+                            e.type === 'BulletA'
+                                ? <BulletA {...e} key={e.id} />
+                                :
+                            e.type === 'BulletB'
+                                ? <BulletB {...e} key={e.id} />
+                                : null
                         )
                     })
                 }
@@ -184,40 +236,57 @@ export class Game extends Component<props_game, state_game, any> {
 
     public componentDidMount(): void {
         this.init();
-        setTimeout(this.tick, 20);
-        this.append(new Adam(0, 0, 3));
     }
 
-    private tick: () => void
-        = () => {
-            let towers_update: Array<Tower> = [];
-            this.state.towers.forEach(e => {
-                e.tick();
-                if (e.alive()) {
-                    towers_update.push(e);
-                }
-            });
-            let enemies_update: Array<Invator> = [];
-            this.state.enemies.forEach(e => {
-                if (e.move()) {
-                    enemies_update.push(e);
-                }
-            });
-            let flyingItems_update: Array<Bullet> = [];
-            this.state.flyingItems.forEach(e => {
-                if (e.move() && e.hit()) {
-                    flyingItems_update.push(e);
-                }
-            });
+    public componentWillUnmount(): void {
+        System = null;
+    }
 
-            this.setState({
-                towers: towers_update,
-                enemies: enemies_update,
-                flyingItems: flyingItems_update
-            });
-
-            if (this.state.gameState === Game_State.going) {
-                setTimeout(this.tick, 20);
+    protected update(out: number): void {
+        let towers_update: Array<TowerProps> = [];
+        this.state.towers.forEach(e => {
+            if (e.id !== out) {
+                towers_update.push(e);
             }
+        });
+        let enemies_update: Array<InvatorProps> = [];
+        this.state.enemies.forEach(e => {
+            if (e.id !== out) {
+                enemies_update.push(e);
+            }
+        });
+        let flyingItems_update: Array<Bullet_props> = [];
+        this.state.flyingItems.forEach(e => {
+            if (e.id !== out) {
+                flyingItems_update.push(e);
+            }
+        });
+        
+        this.setState({
+            towers: towers_update,
+            enemies: enemies_update,
+            flyingItems: flyingItems_update
+        });
+    }
+
+    public TEST_ADAM(a: number, b: number): void {
+        if (this.state.set[a][b]) {
+            return;
         }
+        this.appendTower({
+            id: Math.random(),
+            level: 2,
+            name: 'Adam',
+            life: 400,
+            armor: 40,
+            physical_dec: 0,
+            fire_resist: 0,
+            cold_resist: 0,
+            electric_resist: 0,
+            magic_dec: 0,
+            arr: a,
+            cor: b,
+            update: this.update
+        });
+    }
 }
