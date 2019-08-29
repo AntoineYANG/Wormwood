@@ -107,12 +107,11 @@ export class BulletA extends Bullet {
 
     public render(): JSX.Element {
         return (
-            <circle
-                cx={this.state.pos}
-                cy={this.props.arr}
-                r={10}
-                style={{fill: this.getPic(), stroke: `black`}}
-            />
+            <image xmlns={`http://www.w3.org/2000/svg`}
+                x={this.state.pos} y={this.props.arr}
+                width={`48px`} height={`40px`}
+                transform={`translate(0, -42)`}
+                xlinkHref={require(`../pic/Bullet/BulletA.png`)} />
         )
     }
 
@@ -138,13 +137,11 @@ export class BulletB extends Bullet {
 
     public render(): JSX.Element {
         return (
-            <ellipse
-                cx={this.state.pos}
-                cy={this.props.arr}
-                rx={30}
-                ry={6}
-                style={{fill: this.getPic()}}
-            />
+            <image xmlns={`http://www.w3.org/2000/svg`}
+                x={this.state.pos} y={this.props.arr}
+                width={`80px`} height={`36px`}
+                transform={`translate(0, -40)`}
+                xlinkHref={require(`../pic/Bullet/BulletB.png`)} />
         )
     }
 

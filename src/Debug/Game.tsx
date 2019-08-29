@@ -6,7 +6,7 @@
 */
 
 import { Bullet_props, BulletA, BulletB } from "./Bullet";
-import { TowerProps, InvatorProps, Adam } from "./Living";
+import { TowerProps, InvatorProps, Adam, Mechanical } from "./Living";
 import React, { Component } from "react";
 
 var System: Game | null = null;
@@ -57,6 +57,13 @@ export class Game extends Component<props_game, state_game, any> {
             [false, false, false, false, false, false, false, false, false, false, false, false]]
     };
 
+    public set: Array< Array<object | null> > = [[null, null, null, null, null, null, null, null, null, null, null, null], 
+        [null, null, null, null, null, null, null, null, null, null, null, null], 
+        [null, null, null, null, null, null, null, null, null, null, null, null],
+        [null, null, null, null, null, null, null, null, null, null, null, null], 
+        [null, null, null, null, null, null, null, null, null, null, null, null], 
+        [null, null, null, null, null, null, null, null, null, null, null, null]];
+
     public getArr: () => number = () => this.props.map_arr;
     public getCor: () => number = () => this.props.map_cor;
     public getMargin: (idx: number) => number = (idx: number) => this.props.margin[idx];
@@ -86,6 +93,12 @@ export class Game extends Component<props_game, state_game, any> {
                     [false, false, false, false, false, false, false, false, false, false, false, false], 
                     [false, false, false, false, false, false, false, false, false, false, false, false]]
             });
+            this.set = [[null, null, null, null, null, null, null, null, null, null, null, null], 
+                [null, null, null, null, null, null, null, null, null, null, null, null],
+                [null, null, null, null, null, null, null, null, null, null, null, null],
+                [null, null, null, null, null, null, null, null, null, null, null, null],
+                [null, null, null, null, null, null, null, null, null, null, null, null],
+                [null, null, null, null, null, null, null, null, null, null, null, null]];
         }
     
     private constructor(props: props_game) {
@@ -115,8 +128,17 @@ export class Game extends Component<props_game, state_game, any> {
         this.update = this.update.bind(this);
 
         this.TEST_ADAM = this.TEST_ADAM.bind(this);
+        this.TESTMB = this.TESTMB.bind(this);
 
         System = this;
+    }
+
+    public mount(obj: object, x: number, y: number): void {
+        this.set[x][y] = obj;
+    }
+
+    public unmount(x: number, y: number): void {
+        this.set[x][y] = null;
     }
 
     public static start(): Game {
@@ -127,12 +149,20 @@ export class Game extends Component<props_game, state_game, any> {
     }
 
     public appendTower(item: TowerProps): boolean {
+        if (this.state.set[item.arr][item.cor]) {
+            return false;
+        }
         let towers_update: Array<TowerProps> = this.state.towers;
         towers_update.push(item);
         this.setState({
             towers: towers_update
         });
         this.tower_count++;
+        let set: Array< Array<boolean> > = this.state.set;
+        set[item.arr][item.cor] = true;
+        this.setState({
+            set: set
+        });
         return true;
     }
 
@@ -201,22 +231,21 @@ export class Game extends Component<props_game, state_game, any> {
                                     physical_dec={e.physical_dec} fire_resist={e.fire_resist} cold_resist={e.cold_resist}
                                     electric_resist={e.electric_resist} magic_dec={e.magic_dec}
                                     arr={e.arr} cor={e.cor} key={e.id} level={e.level}
-                                    update={this.update} id={Math.random()} />
+                                    update={this.update} id={e.id} />
                                 : null
                         )
                     })
                 }
                 {
-                    // this.state.enemies.map((e, index) => {
-                    //     return (
-                    //         <circle
-                    //             cx={e.getPosition()[0]}
-                    //             cy={e.getPosition()[1]}
-                    //             r={36} key={`enemy${index}`}
-                    //             style={{fill: `rgba(100, 225, 225, 1})`}}
-                    //         />
-                    //     )
-                    // })
+                    this.state.enemies.map(e => {
+                        return (
+                            e.name === 'Mechanical'
+                                ? <Mechanical name={'Mechanical'} key={e.id} id={e.id} life={e.life} armor={e.armor}
+                                    fire_resist={e.fire_resist} cold_resist={e.cold_resist} electric_resist={e.electric_resist}
+                                    update={this.update} physical_dec={e.physical_dec} magic_dec={e.magic_dec} arr={e.arr} />
+                                : null
+                        )
+                    })
                 }
                 {
                     this.state.flyingItems.map(e => {
@@ -236,6 +265,7 @@ export class Game extends Component<props_game, state_game, any> {
 
     public componentDidMount(): void {
         this.init();
+        setInterval(this.TESTMB, 4000);
     }
 
     public componentWillUnmount(): void {
@@ -270,12 +300,9 @@ export class Game extends Component<props_game, state_game, any> {
     }
 
     public TEST_ADAM(a: number, b: number): void {
-        if (this.state.set[a][b]) {
-            return;
-        }
         this.appendTower({
             id: Math.random(),
-            level: 2,
+            level: 1,
             name: 'Adam',
             life: 400,
             armor: 40,
@@ -286,6 +313,22 @@ export class Game extends Component<props_game, state_game, any> {
             magic_dec: 0,
             arr: a,
             cor: b,
+            update: this.update
+        });
+    }
+
+    public TESTMB(): void {
+        this.appendInvator({
+            id: Math.random(),
+            life: 500,
+            name: 'Mechanical',
+            armor: 20,
+            fire_resist: 20,
+            cold_resist: 0,
+            electric_resist: -15,
+            physical_dec: 0,
+            magic_dec: 0,
+            arr: parseInt((Math.random() * 6).toString()),
             update: this.update
         });
     }
