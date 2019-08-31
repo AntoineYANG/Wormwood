@@ -2,7 +2,7 @@
  * @Author: Antoine YANG 
  * @Date: 2019-08-27 16:15:48 
  * @Last Modified by: Antoine YANG
- * @Last Modified time: 2019-08-27 19:06:14
+ * @Last Modified time: 2019-08-31 17:02:54
  */
 
 import { Component } from 'react';
@@ -21,6 +21,7 @@ export interface Bullet_props {
     electric: number,
     debuff: null,
     speed: number,
+    line: number,
     arr: number,
     pos: number,
     update: (out: number) => void
@@ -91,6 +92,57 @@ abstract class Bullet extends Component<Bullet_props, Bullet_state, any> {
     }
 }
 
+export class NoBullet extends Bullet {
+    public constructor(props: Bullet_props) {
+        super(props);
+        this.state = {
+            pos: this.props.pos,
+            alive: true
+        };
+    }
+
+    public componentDidMount(): void {
+        this.getPic = () => 'white';
+        setInterval(this.tick, 20);
+    }
+
+    public render(): JSX.Element {
+        return (
+            <image xmlns={`http://www.w3.org/2000/svg`} xlinkHref={require(`../pic/Bullet/BulletA.png`)}
+                x={this.state.pos} y={this.props.arr} width={0} height={0} opacity={0} />
+        )
+    }
+
+    public hit: () => boolean
+        = () => {
+            if (this.props.side === Side.defencer) {
+                for (let i: number = 0; i < Game.start().EnemyInstance.length; i++) {
+                    if (this.props.line !== Game.start().EnemyInstance[i].arr) {
+                        continue;
+                    }
+                    if (this.state.pos >= Game.start().EnemyInstance[i].pos - 36 + Game.start().getMargin(3) + Game.start().getPadding(0)
+                            && this.state.pos <= Game.start().getMargin(3) + Game.start().getPadding(0) + Game.start().EnemyInstance[i].pos) {
+                        Game.start().EnemyInstance[i].component.hurt(this.props.physical, this.props.fire, this.props.cold, this.props.electric);
+                        return true;
+                    }
+                }
+            }
+            else {
+                for (let i: number = 0; i < Game.start().TowerInstance.length; i++) {
+                    if (this.props.line !== Game.start().TowerInstance[i].arr) {
+                        continue;
+                    }
+                    if (this.state.pos >= Game.start().TowerInstance[i].pos - 36
+                            && this.state.pos <= Game.start().TowerInstance[i].pos) {
+                        Game.start().TowerInstance[i].component.hurt(this.props.physical, this.props.fire, this.props.cold, this.props.electric);
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+}
+
 export class BulletA extends Bullet {
     public constructor(props: Bullet_props) {
         super(props);
@@ -117,6 +169,30 @@ export class BulletA extends Bullet {
 
     public hit: () => boolean
         = () => {
+            if (this.props.side === Side.defencer) {
+                for (let i: number = 0; i < Game.start().EnemyInstance.length; i++) {
+                    if (this.props.line !== Game.start().EnemyInstance[i].arr) {
+                        continue;
+                    }
+                    if (this.state.pos >= Game.start().EnemyInstance[i].pos - 36 + Game.start().getMargin(3) + Game.start().getPadding(0)
+                            && this.state.pos <= Game.start().getMargin(3) + Game.start().getPadding(0) + Game.start().EnemyInstance[i].pos) {
+                        Game.start().EnemyInstance[i].component.hurt(this.props.physical, this.props.fire, this.props.cold, this.props.electric);
+                        return true;
+                    }
+                }
+            }
+            else {
+                for (let i: number = 0; i < Game.start().TowerInstance.length; i++) {
+                    if (this.props.line !== Game.start().TowerInstance[i].arr) {
+                        continue;
+                    }
+                    if (this.state.pos >= Game.start().TowerInstance[i].pos - 36
+                            && this.state.pos <= Game.start().TowerInstance[i].pos) {
+                        Game.start().TowerInstance[i].component.hurt(this.props.physical, this.props.fire, this.props.cold, this.props.electric);
+                        return true;
+                    }
+                }
+            }
             return false;
         }
 }
@@ -147,6 +223,28 @@ export class BulletB extends Bullet {
 
     public hit: () => boolean
         = () => {
+            if (this.props.side === Side.defencer) {
+                for (let i: number = 0; i < Game.start().EnemyInstance.length; i++) {
+                    if (this.props.line !== Game.start().EnemyInstance[i].arr) {
+                        continue;
+                    }
+                    if (this.state.pos >= Game.start().EnemyInstance[i].pos - 36 + Game.start().getMargin(3) + Game.start().getPadding(0)
+                            && this.state.pos <= Game.start().getMargin(3) + Game.start().getPadding(0) + Game.start().EnemyInstance[i].pos) {
+                        Game.start().EnemyInstance[i].component.hurt(this.props.physical, this.props.fire, this.props.cold, this.props.electric);
+                    }
+                }
+            }
+            else {
+                for (let i: number = 0; i < Game.start().TowerInstance.length; i++) {
+                    if (this.props.line !== Game.start().TowerInstance[i].arr) {
+                        continue;
+                    }
+                    if (this.state.pos + 50 >= Game.start().TowerInstance[i].pos - 8
+                            && this.state.pos + 50 <= Game.start().TowerInstance[i].pos + 8) {
+                        Game.start().TowerInstance[i].component.hurt(this.props.physical, this.props.fire, this.props.cold, this.props.electric);
+                    }
+                }
+            }
             return false;
         }
 }

@@ -1,11 +1,11 @@
 /*
 * @Author: Antoine YANG 
 * @Date: 2019-08-27 12:59:16 
-* @Last Modified by: Antoine YANG
-* @Last Modified time: 2019-08-27 18:34:20
+ * @Last Modified by: Antoine YANG
+ * @Last Modified time: 2019-08-31 19:35:04
 */
 
-import { Shield } from "./Shield";
+import { Shield, PhysicalShield } from "./Shield";
 import { Game } from "./Game";
 import React, { Component } from "react";
 
@@ -42,7 +42,7 @@ export interface TowerState {
     cold_resist: number;
     electric_resist: number;
     magic_dec: number;
-    shield: Shield.Shield | null;
+    shield: Shield | null;
     action: Action;
     pic: string;
 }
@@ -70,18 +70,19 @@ export abstract class Tower extends Component<TowerProps, TowerState, any> {
     
     public alive: () => boolean
         = () => this.state.hp > 0;
-    public getInfo: (level: number) => string
+    public getInfo: (level: number) => Array<string>
         = (level: number) => {
             switch (level) {
                 case 0:
-                    return ``;
+                    return [``];
                 case 1:
-                    return `${this.props.name}    HP: ${this.state.hp}/${this.props.life}`;
+                    return [`HP: ${this.state.hp}/${this.props.life}`];
                 case 2:
-                    return `${this.props.name}    HP: ${this.state.hp}/${this.props.life}\n`
-                        + `Resistance:     A ${this.state.armor}  F ${this.state.fire_resist}  C ${this.state.cold_resist}  E ${this.state.electric_resist}`;
+                    return [`HP: ${this.state.hp}/${this.props.life}`,
+                        `Resistance:     A ${this.state.armor}  F ${this.state.fire_resist}`
+                        + `C ${this.state.cold_resist}  E ${this.state.electric_resist}`];
             }
-            return ``;
+            return [``];
         }
     public getPosition: () => Array<number>
         = () => {
@@ -131,10 +132,33 @@ export abstract class Tower extends Component<TowerProps, TowerState, any> {
     protected abstract skill2: () => void;
     protected abstract skill3: () => void;
 
+    public hurt(physical: number, fire: number = 0, cold: number = 0, electric: number = 0): void {
+        let p: number = (physical * this.props.life / (this.props.life + this.state.armor)) - this.state.physical_dec;
+        p = p > 0 ? p : 0;
+        let f: number = fire * (100 - this.state.fire_resist) / 100;
+        f = f > this.state.magic_dec ? f - this.state.magic_dec : f;
+        let c: number = cold * (100 - this.state.cold_resist) / 100;
+        c = c > this.state.magic_dec ? c - this.state.magic_dec : c;
+        let e: number = electric * (100 - this.state.electric_resist) / 100;
+        e = e > this.state.magic_dec ? e - this.state.magic_dec : e;
+        let hp: number = this.state.hp - (p + f + c + e);
+        hp = hp >= 0 ? hp <= this.props.life ? parseInt((hp + 0.5).toString()) : this.props.life : 0;
+        if (hp !== this.state.hp) {
+            this.setState({
+                hp: hp
+            });
+        }
+        else if (hp <= 0) {
+            this.update(this.props.id);
+        }
+    }
+
 
     public componentDidMount(): void {
         Game.start().mount(this, this.props.arr, this.props.cor);
         setInterval(this.tick, 20);
+        Game.start().TowerInstance.push({...this.state, dom: this.refs.dom, uid: this.props.id, arr: this.props.arr, component: this,
+            pos: Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()});
     }
 
     public componentWillUnmount(): void {
@@ -145,7 +169,7 @@ export abstract class Tower extends Component<TowerProps, TowerState, any> {
     protected waiting: number = 0;
     public tick: () => void
         = () => {
-            if (!this.state) {
+            if (!this.state || this.state.hp <= 0) {
                 return;
             }
             if (this.loaded < this.CD) {
@@ -156,9 +180,11 @@ export abstract class Tower extends Component<TowerProps, TowerState, any> {
                 switch (this.state.action) {
                     case Action.moving:
                         this.prepare();
-                        this.setState({
-                            action: Action.pre_ani
-                        });
+                        if (this.promise) {
+                            this.setState({
+                                action: Action.pre_ani
+                            });
+                        }
                         break;
                     case Action.pre_ani:
                         this.act();
@@ -220,7 +246,7 @@ export interface InvatorState {
     cold_resist: number;
     electric_resist: number;
     magic_dec: number;
-    shield: Shield.Shield | null;
+    shield: Shield | null;
     action: Action;
     pos: number;
 }
@@ -252,19 +278,19 @@ export abstract class Invator extends Component<InvatorProps, InvatorState, any>
 
     public alive: () => boolean
         = () => this.state.hp > 0;
-    public getInfo: (level: number) => string
+    public getInfo: (level: number) => Array<string>
         = (level: number) => {
             switch (level) {
                 case 0:
-                    return ``;
+                    return [``];
                 case 1:
-                    return `${this.props.name}    HP: ${this.state.hp}/${this.props.life}`;
+                    return [`HP: ${this.state.hp}/${this.props.life}`];
                 case 2:
-                    return `${this.props.name}    HP: ${this.state.hp}/${this.props.life}\n`
-                        + `Resistance:     A ${this.state.armor}  F ${this.state.fire_resist}`
-                        + `C ${this.state.cold_resist}  E ${this.state.electric_resist}`;
+                    return [`HP: ${this.state.hp}/${this.props.life}`,
+                        `Resistance:     A ${this.state.armor}  F ${this.state.fire_resist}`
+                        + `C ${this.state.cold_resist}  E ${this.state.electric_resist}`];
             }
-            return ``;
+            return [``];
         }
     public getPosition: () => Array<number>
         = () => {
@@ -281,7 +307,7 @@ export abstract class Invator extends Component<InvatorProps, InvatorState, any>
 
     public move: () => boolean
         = () => {
-            if (Game.start().set[this.props.arr][parseInt((this.state.pos / Game.start().getSpan()).toString())]) {
+            if (Game.start().set[this.props.arr][parseInt(((this.state.pos - 24) / Game.start().getSpan()).toString())]) {
                 if (this.animation >= this.waiting) {
                     this.animation = 0;
                     switch (this.state.action) {
@@ -338,7 +364,7 @@ export abstract class Invator extends Component<InvatorProps, InvatorState, any>
 
     protected act: () => void
         = () => {
-            if (this.prepare === null) {
+            if (this.promise === null) {
                 return;
             }
             else {
@@ -349,7 +375,41 @@ export abstract class Invator extends Component<InvatorProps, InvatorState, any>
     
     protected abstract hit: () => boolean;
 
+    public hurt(physical: number, fire: number = 0, cold: number = 0, electric: number = 0): void {
+        let p: number = (physical * this.props.life / (this.props.life + this.state.armor)) - this.state.physical_dec;
+        p = p > 0 ? p : 0;
+        let f: number = fire * (100 - this.state.fire_resist) / 100;
+        f = f > this.state.magic_dec ? f - this.state.magic_dec : f;
+        let c: number = cold * (100 - this.state.cold_resist) / 100;
+        c = c > this.state.magic_dec ? c - this.state.magic_dec : c;
+        let e: number = electric * (100 - this.state.electric_resist) / 100;
+        e = e > this.state.magic_dec ? e - this.state.magic_dec : e;
+        let hp: number = this.state.hp - (p + f + c + e);
+        hp = hp >= 0 ? hp <= this.props.life ? parseInt((hp + 0.5).toString()) : this.props.life : 0;
+        if (hp !== this.state.hp) {
+            this.setState({
+                hp: hp
+            });
+        }
+        else if (hp <= 0) {
+            setTimeout(() => this.update(this.props.id), 600);
+        }
+    }
+
     protected update: (out: number) => void;
+
+    public componentDidUpdate(): void {
+        let flag: boolean = false;
+        for (let i: number = 0; i < Game.start().EnemyInstance.length; i++) {
+            if (Game.start().EnemyInstance[i].uid === this.props.id) {
+                Game.start().EnemyInstance[i].pos = this.state.pos;
+                flag = true;
+            }
+        }
+        if (!flag && this.refs.dom) {
+            Game.start().EnemyInstance.push({...this.state, dom: this.refs.dom, uid: this.props.id, arr: this.props.arr, component: this});
+        }
+    }
 
     public tick(): void {
         if (!this.state || !this.alive() || this.state.pos <= 0) {
@@ -368,67 +428,213 @@ export class Adam extends Tower {
     }
 
     public render(): JSX.Element {
+        let info: Array<string> = this.getInfo(2);
         switch (this.state.action) {
             case Action.moving:
                 return (
-                    <image xmlns={`http://www.w3.org/2000/svg`}
-                        x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
-                        y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                        width={`100px`} height={`100px`}
-                        transform={`translate(-50, -60)`}
-                        xlinkHref={require(`../pic/Adam/Adam_normal_0.png`)} />
+                    <>
+                        <image xmlns={`http://www.w3.org/2000/svg`}
+                            x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`100px`} height={`100px`}
+                            transform={`translate(-50, -60)`}
+                            xlinkHref={require(`../pic/Adam/Adam_normal_0.png`)} />
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`50px`} height={`6px`} transform={`translate(-30, -66)`}
+                            style={{
+                                fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                            }}/>
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-29, -65)`}
+                            style={{
+                                fill: this.state.hp / this.props.life < 0.2 ? '#f60' : '#cc9', stroke: 'none'
+                            }}/>
+                        <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            dx={-34} dy={-70} style={{
+                                fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                            }}>
+                            { info[0] }
+                        </text>
+                    </>
                 )
             case Action.pre_ani:
                 return (
-                    <image xmlns={`http://www.w3.org/2000/svg`}
-                        x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
-                        y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                        width={`100px`} height={`100px`}
-                        transform={`translate(-50, -60)`}
-                        xlinkHref={require(`../pic/Adam/Adam_pre_0.png`)} />
+                    <>
+                        <image xmlns={`http://www.w3.org/2000/svg`}
+                            x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`100px`} height={`100px`}
+                            transform={`translate(-50, -60)`}
+                            xlinkHref={require(`../pic/Adam/Adam_pre_0.png`)} />
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`50px`} height={`6px`} transform={`translate(-30, -66)`}
+                            style={{
+                                fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                            }}/>
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-29, -65)`}
+                            style={{
+                                fill: this.state.hp / this.props.life < 0.2 ? '#f60' : '#cc9', stroke: 'none'
+                            }}/>
+                        <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            dx={-34} dy={-70} style={{
+                                fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                            }}>
+                            { info[0] }
+                        </text>
+                    </>
                 )
             case Action.dur_ani:
                 return (
-                    <image xmlns={`http://www.w3.org/2000/svg`}
-                        x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
-                        y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                        width={`100px`} height={`100px`}
-                        transform={`translate(-50, -60)`}
-                        xlinkHref={require(`../pic/Adam/Adam_dur_0.png`)} />
+                    <>
+                        <image xmlns={`http://www.w3.org/2000/svg`}
+                            x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`100px`} height={`100px`}
+                            transform={`translate(-50, -60)`}
+                            xlinkHref={require(`../pic/Adam/Adam_dur_0.png`)} />
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`50px`} height={`6px`} transform={`translate(-30, -66)`}
+                            style={{
+                                fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                            }}/>
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-29, -65)`}
+                            style={{
+                                fill: this.state.hp / this.props.life < 0.2 ? '#f60' : '#cc9', stroke: 'none'
+                            }}/>
+                        <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            dx={-34} dy={-70} style={{
+                                fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                            }}>
+                            { info[0] }
+                        </text>
+                    </>
                 )
             case Action.aft_ani:
                 return (
-                    <image xmlns={`http://www.w3.org/2000/svg`}
-                        x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
-                        y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                        width={`100px`} height={`100px`}
-                        transform={`translate(-50, -60)`}
-                        xlinkHref={require(`../pic/Adam/Adam_aft_0.png`)} />
+                    <>
+                        <image xmlns={`http://www.w3.org/2000/svg`}
+                            x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`100px`} height={`100px`}
+                            transform={`translate(-50, -60)`}
+                            xlinkHref={require(`../pic/Adam/Adam_aft_0.png`)} />
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`50px`} height={`6px`} transform={`translate(-30, -66)`}
+                            style={{
+                                fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                            }}/>
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-29, -65)`}
+                            style={{
+                                fill: this.state.hp / this.props.life < 0.2 ? '#f60' : '#cc9', stroke: 'none'
+                            }}/>
+                        <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            dx={-34} dy={-70} style={{
+                                fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                            }}>
+                            { info[0] }
+                        </text>
+                    </>
                 )
             case Action.controlled:
                 return (
-                    <image xmlns={`http://www.w3.org/2000/svg`}
-                        x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
-                        y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                        width={`100px`} height={`100px`}
-                        xlinkHref={require(`../pic/Adam/Adam_normal_0.png`)} />
+                    <>
+                        <image xmlns={`http://www.w3.org/2000/svg`}
+                            x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`100px`} height={`100px`}
+                            xlinkHref={require(`../pic/Adam/Adam_normal_0.png`)} />
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`50px`} height={`6px`} transform={`translate(-30, -66)`}
+                            style={{
+                                fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                            }}/>
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-29, -65)`}
+                            style={{
+                                fill: this.state.hp / this.props.life < 0.2 ? '#f60' : '#cc9', stroke: 'none'
+                            }}/>
+                        <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            dx={-34} dy={-70} style={{
+                                fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                            }}>
+                            { info[0] }
+                        </text>
+                    </>
                 )
         }
         return (
-            <image xmlns={`http://www.w3.org/2000/svg`}
-                x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
-                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                width={`100px`} height={`100px`}
-                transform={`translate(-50, -60)`}
-                xlinkHref={require(`../pic/Adam/Adam_normal_0.png`)} />
+            <>
+                <image xmlns={`http://www.w3.org/2000/svg`}
+                    x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                    y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                    width={`100px`} height={`100px`}
+                    transform={`translate(-50, -60)`}
+                    xlinkHref={require(`../pic/Adam/Adam_normal_0.png`)} />
+                <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                    y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                    width={`50px`} height={`6px`} transform={`translate(-30, -66)`}
+                    style={{
+                        fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                    }}/>
+                <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                    y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                    width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-29, -65)`}
+                    style={{
+                        fill: this.state.hp / this.props.life < 0.2 ? '#f60' : '#cc9', stroke: 'none'
+                    }}/>
+                <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
+                    y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                    dx={-34} dy={-70} style={{
+                        fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                        WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                    }}>
+                    { info[0] }
+                </text>
+            </>
         )
     }
 
     protected prepare = () => {
+            let flag: boolean = false;
+            for (let i: number = 0; i < Game.start().EnemyInstance.length; i++) {
+                if (this.props.arr === Game.start().EnemyInstance[i].arr) {
+                    flag = true;
+                    break;
+                }
+            }
+            if (!flag) {
+                this.promise = null;
+                this.animation = Action.moving;
+                this.waiting = -1;
+                return;
+            }
             if (this.state.level === 0) {
                 //>>console.log("Pre: hit");
                 this.promise = this.hit;
-                this.waiting = 600;
+                this.waiting = 800;
                 return;
             }
             let r: number = Math.random() * (1 + this.luck / 100);
@@ -477,7 +683,7 @@ export class Adam extends Tower {
                     break;
             }
             this.promise = this.hit;
-            this.waiting = 600;
+            this.waiting = 800;
             return;
         }
 
@@ -495,6 +701,7 @@ export class Adam extends Tower {
                 debuff: null,
                 speed: 6,
                 arr: Game.start().getMargin(0) + (this.props.arr + 0.4) * Game.start().getLineHeight(),
+                line: this.props.arr,
                 pos: Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.7) * Game.start().getSpan(),
                 update: this.update
             });
@@ -514,8 +721,9 @@ export class Adam extends Tower {
                 cold: 0,
                 electric: 0,
                 debuff: null,
-                speed: 30,
+                speed: 36,
                 arr: Game.start().getMargin(0) + (this.props.arr + 0.4) * Game.start().getLineHeight(),
+                line: this.props.arr,
                 pos: Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.7) * Game.start().getSpan(),
                 update: this.update
             });
@@ -548,78 +756,487 @@ export class Mechanical extends Invator {
         = () => {
             Game.start().appendBullet({
                 id: Math.random(),
-                type: 'BulletB',
+                type: 'NoBullet',
                 side: Side.invator,
                 pic: 'white',
-                physical: 50,
+                physical: 80,
                 fire: 0,
                 cold: 0,
                 electric: 0,
                 debuff: null,
                 speed: 6,
                 arr: Game.start().getMargin(0) + (this.props.arr + 0.3) * Game.start().getLineHeight(),
+                line: this.props.arr,
                 pos: Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos - 72,
                 update: this.update
             });
-            this.waiting = 600;
+            this.waiting = 500;
             return true;
         };
     
     public render(): JSX.Element {
+        if (this.state.hp === 0) {
+            return (
+                <>
+                    <image xmlns={`http://www.w3.org/2000/svg`}
+                        x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                        y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                        width={`140px`} height={`140px`} ref={"dom"}
+                        transform={`translate(-88, -72)`}
+                        xlinkHref={require(`../pic/Invator/Mechanical_die_0.png`)} />
+                </>
+            )
+        }
+        let info: Array<string> = this.getInfo(2);
         switch (this.state.action) {
             case Action.moving:
                 return (
-                    <image xmlns={`http://www.w3.org/2000/svg`}
-                        x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
-                        y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                        width={`140px`} height={`140px`}
-                        transform={`translate(-70, -100)`}
-                        xlinkHref={require(`../pic/Invator/Mechanical_normal_0.png`)} />
+                    <>
+                        <image xmlns={`http://www.w3.org/2000/svg`}
+                            x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`140px`} height={`140px`} ref={"dom"}
+                            transform={`translate(-70, -100)`}
+                            xlinkHref={require(`../pic/Invator/Mechanical_normal_0.png`)} />
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`50px`} height={`6px`} transform={`translate(-20, -100)`}
+                            style={{
+                                fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                            }}/>
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -99)`}
+                            style={{
+                                fill: this.state.hp / this.props.life < 0.2 ? '#f60' : '#cc9', stroke: 'none'
+                            }}/>
+                        <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            dx={-25} dy={-104} style={{
+                                fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                            }}>
+                            { info[0] }
+                        </text>
+                    </>
                 )
             case Action.pre_ani:
                 return (
-                    <image xmlns={`http://www.w3.org/2000/svg`}
-                        x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
-                        y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                        width={`140px`} height={`140px`}
-                        transform={`translate(-70, -100)`}
-                        xlinkHref={require(`../pic/Invator/Mechanical_pre_0.png`)} />
+                    <>
+                        <image xmlns={`http://www.w3.org/2000/svg`}
+                            x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`168px`} height={`168px`} ref={"dom"}
+                            transform={`translate(-79, -130)`}
+                            xlinkHref={require(`../pic/Invator/Mechanical_pre_0.png`)} />
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`50px`} height={`6px`} transform={`translate(-20, -100)`}
+                            style={{
+                                fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                            }}/>
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -99)`}
+                            style={{
+                                fill: this.state.hp / this.props.life < 0.2 ? '#a60' : '#cc9', stroke: 'none'
+                            }}/>
+                        <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            dx={-25} dy={-104} style={{
+                                fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                            }}>
+                            { info[0] }
+                        </text>
+                    </>
                 )
             case Action.dur_ani:
                 return (
-                    <image xmlns={`http://www.w3.org/2000/svg`}
-                        x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
-                        y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                        width={`140px`} height={`140px`}
-                        transform={`translate(-70, -100)`}
-                        xlinkHref={require(`../pic/Invator/Mechanical_dur_0.png`)} />
+                    <>
+                        <image xmlns={`http://www.w3.org/2000/svg`}
+                            x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`150px`} height={`150px`} ref={"dom"}
+                            transform={`translate(-120, -90)`}
+                            xlinkHref={require(`../pic/Invator/Mechanical_dur_0.png`)} />
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`50px`} height={`6px`} transform={`translate(-20, -100)`}
+                            style={{
+                                fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                            }}/>
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -99)`}
+                            style={{
+                                fill: this.state.hp / this.props.life < 0.2 ? '#a60' : '#cc9', stroke: 'none'
+                            }}/>
+                        <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            dx={-25} dy={-104} style={{
+                                fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                            }}>
+                            { info[0] }
+                        </text>
+                    </>
                 )
             case Action.aft_ani:
                 return (
-                    <image xmlns={`http://www.w3.org/2000/svg`}
-                        x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
-                        y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                        width={`140px`} height={`140px`}
-                        transform={`translate(-70, -100)`}
-                        xlinkHref={require(`../pic/Invator/Mechanical_aft_0.png`)} />
+                    <>
+                        <image xmlns={`http://www.w3.org/2000/svg`}
+                            x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`150px`} height={`150px`} ref={"dom"}
+                            transform={`translate(-115, -96)`}
+                            xlinkHref={require(`../pic/Invator/Mechanical_aft_0.png`)} />
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`50px`} height={`6px`} transform={`translate(-20, -100)`}
+                            style={{
+                                fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                            }}/>
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -99)`}
+                            style={{
+                                fill: this.state.hp / this.props.life < 0.2 ? '#a60' : '#cc9', stroke: 'none'
+                            }}/>
+                        <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            dx={-25} dy={-104} style={{
+                                fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                            }}>
+                            { info[0] }
+                        </text>
+                    </>
                 )
             case Action.controlled:
                 return (
-                    <image xmlns={`http://www.w3.org/2000/svg`}
-                        x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
-                        y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                        width={`140px`} height={`140px`}
-                        transform={`translate(-70, -100)`}
-                        xlinkHref={require(`../pic/Invator/Mechanical_normal_0.png`)} />
+                    <>
+                        <image xmlns={`http://www.w3.org/2000/svg`}
+                            x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`140px`} height={`140px`} ref={"dom"}
+                            transform={`translate(-70, -100)`}
+                            xlinkHref={require(`../pic/Invator/Mechanical_normal_0.png`)} />
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`50px`} height={`6px`} transform={`translate(-20, -100)`}
+                            style={{
+                                fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                            }}/>
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -99)`}
+                            style={{
+                                fill: '#e96', stroke: 'none'
+                            }}/>
+                        <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            dx={-25} dy={-104} style={{
+                                fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                            }}>
+                            { info[0] }
+                        </text>
+                    </>
                 )
         }
         return (
-            <image xmlns={`http://www.w3.org/2000/svg`}
-                x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
-                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                width={`140px`} height={`140px`}
-                transform={`translate(-70, -100)`}
-                xlinkHref={require(`../pic/Invator/Mechanical_normal_0.png`)} />
+            <>
+                <image xmlns={`http://www.w3.org/2000/svg`}
+                    x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                    y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                    width={`140px`} height={`140px`} ref={"dom"}
+                    transform={`translate(-70, -100)`}
+                    xlinkHref={require(`../pic/Invator/Mechanical_normal_0.png`)} />
+                <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                    y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                    width={`50px`} height={`6px`} transform={`translate(-20, -100)`}
+                    style={{
+                        fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                    }}/>
+                <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                    y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                    width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -99)`}
+                    style={{
+                        fill: this.state.hp / this.props.life < 0.2 ? '#a60' : '#cc9', stroke: 'none'
+                    }}/>
+                <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                    y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                    dx={-25} dy={-104} style={{
+                        fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                        WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                    }}>
+                    { info[0] }
+                </text>
+            </>
+        )
+    }
+}
+
+export class MechanicalPain extends Invator {
+    protected prepare = () => {
+            this.promise = this.hit;
+            this.waiting = 600;
+            return;
+        }
+
+    protected hit: () => boolean
+        = () => {
+            Game.start().appendBullet({
+                id: Math.random(),
+                type: 'NoBullet',
+                side: Side.invator,
+                pic: 'white',
+                physical: 80,
+                fire: 0,
+                cold: 0,
+                electric: 0,
+                debuff: null,
+                speed: 6,
+                arr: Game.start().getMargin(0) + (this.props.arr + 0.3) * Game.start().getLineHeight(),
+                line: this.props.arr,
+                pos: Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos - 72,
+                update: this.update
+            });
+            this.waiting = 500;
+            return true;
+        };
+
+    public componentDidMount(): void {
+        setInterval(this.tick, 20);
+        this.shieldTick = this.shieldTick.bind(this);
+        setInterval(this.shieldTick, 100);
+        this.setState({
+            shield: new PhysicalShield(300, 5000)
+        });
+    }
+
+    private shieldCD: number = 4000;
+    private shieldLoaded: number = 0;
+
+    private shieldTick(): void {
+        if (this.state.shield && this.state.shield!.alive()) {
+            return;
+        }
+        if (this.shieldLoaded < this.shieldCD) {
+            this.shieldLoaded += 100;
+            return;
+        }
+        if (this.animation === Action.moving || this.animation === Action.aft_ani) {
+            if (Math.random() >= 0.8) {
+                this.setState({
+                    shield: new PhysicalShield(400, 10000)
+                });
+                this.shieldLoaded = 0;
+            }
+        }
+    }
+    
+    public render(): JSX.Element {
+        if (this.state.hp === 0) {
+            return (
+                <>
+                    <image xmlns={`http://www.w3.org/2000/svg`}
+                        x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                        y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                        width={`140px`} height={`140px`} ref={"dom"}
+                        transform={`translate(-88, -72)`}
+                        xlinkHref={require(`../pic/Invator/MechanicalPain_die_0.png`)} />
+                </>
+            )
+        }
+        let info: Array<string> = this.getInfo(2);
+        switch (this.state.action) {
+            case Action.moving:
+                return (
+                    <>
+                        <image xmlns={`http://www.w3.org/2000/svg`}
+                            x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`140px`} height={`140px`} ref={"dom"}
+                            transform={`translate(-70, -100)`}
+                            xlinkHref={require(`../pic/Invator/MechanicalPain_normal_0.png`)} />
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`50px`} height={`6px`} transform={`translate(-20, -100)`}
+                            style={{
+                                fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                            }}/>
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -99)`}
+                            style={{
+                                fill: this.state.hp / this.props.life < 0.2 ? '#f60' : '#cc9', stroke: 'none'
+                            }}/>
+                        <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            dx={-25} dy={-104} style={{
+                                fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                            }}>
+                            { info[0] }
+                        </text>
+                    </>
+                )
+            case Action.pre_ani:
+                return (
+                    <>
+                        <image xmlns={`http://www.w3.org/2000/svg`}
+                            x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`168px`} height={`168px`} ref={"dom"}
+                            transform={`translate(-79, -130)`}
+                            xlinkHref={require(`../pic/Invator/MechanicalPain_pre_0.png`)} />
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`50px`} height={`6px`} transform={`translate(-20, -100)`}
+                            style={{
+                                fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                            }}/>
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -99)`}
+                            style={{
+                                fill: this.state.hp / this.props.life < 0.2 ? '#a60' : '#cc9', stroke: 'none'
+                            }}/>
+                        <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            dx={-25} dy={-104} style={{
+                                fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                            }}>
+                            { info[0] }
+                        </text>
+                    </>
+                )
+            case Action.dur_ani:
+                return (
+                    <>
+                        <image xmlns={`http://www.w3.org/2000/svg`}
+                            x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`150px`} height={`150px`} ref={"dom"}
+                            transform={`translate(-120, -90)`}
+                            xlinkHref={require(`../pic/Invator/MechanicalPain_dur_0.png`)} />
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`50px`} height={`6px`} transform={`translate(-20, -100)`}
+                            style={{
+                                fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                            }}/>
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -99)`}
+                            style={{
+                                fill: this.state.hp / this.props.life < 0.2 ? '#a60' : '#cc9', stroke: 'none'
+                            }}/>
+                        <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            dx={-25} dy={-104} style={{
+                                fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                            }}>
+                            { info[0] }
+                        </text>
+                    </>
+                )
+            case Action.aft_ani:
+                return (
+                    <>
+                        <image xmlns={`http://www.w3.org/2000/svg`}
+                            x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`150px`} height={`150px`} ref={"dom"}
+                            transform={`translate(-115, -96)`}
+                            xlinkHref={require(`../pic/Invator/MechanicalPain_aft_0.png`)} />
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`50px`} height={`6px`} transform={`translate(-20, -100)`}
+                            style={{
+                                fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                            }}/>
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -99)`}
+                            style={{
+                                fill: this.state.hp / this.props.life < 0.2 ? '#a60' : '#cc9', stroke: 'none'
+                            }}/>
+                        <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            dx={-25} dy={-104} style={{
+                                fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                            }}>
+                            { info[0] }
+                        </text>
+                    </>
+                )
+            case Action.controlled:
+                return (
+                    <>
+                        <image xmlns={`http://www.w3.org/2000/svg`}
+                            x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`140px`} height={`140px`} ref={"dom"}
+                            transform={`translate(-70, -100)`}
+                            xlinkHref={require(`../pic/Invator/MechanicalPain_normal_0.png`)} />
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`50px`} height={`6px`} transform={`translate(-20, -100)`}
+                            style={{
+                                fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                            }}/>
+                        <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -99)`}
+                            style={{
+                                fill: '#e96', stroke: 'none'
+                            }}/>
+                        <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                            y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                            dx={-25} dy={-104} style={{
+                                fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                            }}>
+                            { info[0] }
+                        </text>
+                    </>
+                )
+        }
+        return (
+            <>
+                <image xmlns={`http://www.w3.org/2000/svg`}
+                    x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                    y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                    width={`140px`} height={`140px`} ref={"dom"}
+                    transform={`translate(-70, -100)`}
+                    xlinkHref={require(`../pic/Invator/Mechanical_normal_0.png`)} />
+                <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                    y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                    width={`50px`} height={`6px`} transform={`translate(-20, -100)`}
+                    style={{
+                        fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                    }}/>
+                <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                    y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                    width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -99)`}
+                    style={{
+                        fill: this.state.hp / this.props.life < 0.2 ? '#a60' : '#cc9', stroke: 'none'
+                    }}/>
+                <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                    y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                    dx={-25} dy={-104} style={{
+                        fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                        WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                    }}>
+                    { info[0] }
+                </text>
+            </>
         )
     }
 }
