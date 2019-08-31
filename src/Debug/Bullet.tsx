@@ -2,12 +2,12 @@
  * @Author: Antoine YANG 
  * @Date: 2019-08-27 16:15:48 
  * @Last Modified by: Antoine YANG
- * @Last Modified time: 2019-08-31 17:02:54
+ * @Last Modified time: 2019-09-01 02:27:28
  */
 
 import { Component } from 'react';
 import { Side } from './Living';
-import { Game } from './Game';
+import { Game, Game_State } from './Game';
 import React from 'react';
 
 export interface Bullet_props {
@@ -79,7 +79,7 @@ abstract class Bullet extends Component<Bullet_props, Bullet_state, any> {
     public abstract hit: () => boolean;
 
     public tick(): void {
-        if (!this.state || !this.state.alive) {
+        if (Game.start().state.gameState !== Game_State.going || !this.state || !this.state.alive) {
             return;
         }
         let alive: boolean = this.move() && !this.hit();

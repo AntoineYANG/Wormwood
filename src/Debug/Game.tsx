@@ -2,12 +2,14 @@
 * @Author: Antoine YANG 
 * @Date: 2019-08-27 16:45:10 
  * @Last Modified by: Antoine YANG
- * @Last Modified time: 2019-08-31 19:17:23
+ * @Last Modified time: 2019-09-01 03:07:46
 */
 
 import { Bullet_props, BulletA, BulletB, NoBullet } from "./Bullet";
-import { TowerProps, InvatorProps, Adam, Mechanical, InvatorState, Invator, Tower, TowerState, MechanicalPain } from "./Living";
+import { TowerProps, InvatorProps, Adam, Mechanical, InvatorState, Invator, Tower, TowerState, MechanicalPain, Eve } from "./Living";
 import React, { Component, ReactInstance } from "react";
+import Dict, { TowerDict, InvatorDict } from "./Dict";
+
 
 var System: Game | null = null;
 
@@ -31,7 +33,6 @@ export interface state_game {
     towers: Array<TowerProps>;
     enemies: Array<InvatorProps>;
     flyingItems: Array<Bullet_props>;
-    set: Array< Array<boolean> >;
 }
 
 export interface props_game {
@@ -48,13 +49,7 @@ export class Game extends Component<props_game, state_game, any> {
 
         towers: [],
         enemies: [],
-        flyingItems: [],
-        set: [[false, false, false, false, false, false, false, false, false, false, false, false], 
-            [false, false, false, false, false, false, false, false, false, false, false, false], 
-            [false, false, false, false, false, false, false, false, false, false, false, false],
-            [false, false, false, false, false, false, false, false, false, false, false, false], 
-            [false, false, false, false, false, false, false, false, false, false, false, false], 
-            [false, false, false, false, false, false, false, false, false, false, false, false]]
+        flyingItems: []
     };
 
     public set: Array< Array<object | null> > = [[null, null, null, null, null, null, null, null, null, null, null, null], 
@@ -73,6 +68,12 @@ export class Game extends Component<props_game, state_game, any> {
             / this.props.map_cor;
     }
 
+    public end(): void {
+        this.setState({
+            gameState: Game_State.end
+        });
+    }
+
     private tower_count: number = 0;
     private enemy_count: number = 0;
     private bullet_count: number = 0;
@@ -86,13 +87,7 @@ export class Game extends Component<props_game, state_game, any> {
                 gameState: Game_State.going,
                 towers: [],
                 enemies: [],
-                flyingItems: [],
-                set: [[false, false, false, false, false, false, false, false, false, false, false, false], 
-                    [false, false, false, false, false, false, false, false, false, false, false, false], 
-                    [false, false, false, false, false, false, false, false, false, false, false, false],
-                    [false, false, false, false, false, false, false, false, false, false, false, false], 
-                    [false, false, false, false, false, false, false, false, false, false, false, false], 
-                    [false, false, false, false, false, false, false, false, false, false, false, false]]
+                flyingItems: []
             });
             this.set = [[null, null, null, null, null, null, null, null, null, null, null, null], 
                 [null, null, null, null, null, null, null, null, null, null, null, null],
@@ -109,13 +104,7 @@ export class Game extends Component<props_game, state_game, any> {
     
             towers: [],
             enemies: [],
-            flyingItems: [],
-            set: [[false, false, false, false, false, false, false, false, false, false, false, false], 
-                [false, false, false, false, false, false, false, false, false, false, false, false], 
-                [false, false, false, false, false, false, false, false, false, false, false, false],
-                [false, false, false, false, false, false, false, false, false, false, false, false], 
-                [false, false, false, false, false, false, false, false, false, false, false, false], 
-                [false, false, false, false, false, false, false, false, false, false, false, false]]
+            flyingItems: []
         };
         this.getArr = this.getArr.bind(this);
         this.getCor = this.getCor.bind(this);
@@ -144,7 +133,6 @@ export class Game extends Component<props_game, state_game, any> {
 
     public EnemyInstance: Array<InvatorState & {uid: number, dom: ReactInstance, arr: number, component: Invator}> = [];
     public TowerInstance: Array<TowerState & {pos: number, uid: number, dom: ReactInstance, arr: number, component: Tower}> = [];
-    public BulletInstance: Array<object> = [];
 
     public static start(): Game {
         if (System === null) {
@@ -154,7 +142,7 @@ export class Game extends Component<props_game, state_game, any> {
     }
 
     public appendTower(item: TowerProps): boolean {
-        if (this.state.set[item.arr][item.cor]) {
+        if (this.set[item.arr][item.cor]) {
             return false;
         }
         let towers_update: Array<TowerProps> = this.state.towers;
@@ -163,21 +151,19 @@ export class Game extends Component<props_game, state_game, any> {
             towers: towers_update
         });
         this.tower_count++;
-        let set: Array< Array<boolean> > = this.state.set;
-        set[item.arr][item.cor] = true;
-        this.setState({
-            set: set
-        });
         return true;
     }
 
     public appendInvator(item: InvatorProps): boolean {
-        let enemies_update: Array<InvatorProps> = this.state.enemies;
-        enemies_update.push(item);
-        this.setState({
-            enemies: enemies_update
-        });
-        this.bullet_count++;
+        let decay: number = 2000 * Math.random();
+        setTimeout(() => {
+            let enemies_update: Array<InvatorProps> = this.state.enemies;
+            enemies_update.push(item);
+            this.setState({
+                enemies: enemies_update
+            });
+            this.bullet_count++;
+        }, decay);
         return true;
     }
 
@@ -247,6 +233,13 @@ export class Game extends Component<props_game, state_game, any> {
                 {
                     towers.map(e => {
                         return (
+                            e.name === 'Eve'
+                                ? <Eve name={'Eve'} life={e.life} armor={e.armor}
+                                    physical_dec={e.physical_dec} fire_resist={e.fire_resist} cold_resist={e.cold_resist}
+                                    electric_resist={e.electric_resist} magic_dec={e.magic_dec}
+                                    arr={e.arr} cor={e.cor} key={e.id} level={e.level}
+                                    update={this.update} id={e.id} />
+                                : 
                             e.name === 'Adam'
                                 ? <Adam name={'Adam'} life={e.life} armor={e.armor}
                                     physical_dec={e.physical_dec} fire_resist={e.fire_resist} cold_resist={e.cold_resist}
@@ -294,14 +287,14 @@ export class Game extends Component<props_game, state_game, any> {
 
     public componentDidMount(): void {
         this.init();
-        setInterval(this.TESTMB, 4000);
+        setInterval(this.TESTMB, 2000);
     }
 
     public componentWillUnmount(): void {
         System = null;
     }
 
-    protected update(out: number): void {
+    public update(out: number): void {
         let towers_update: Array<TowerProps> = [];
         this.state.towers.forEach(e => {
             if (e.id !== out) {
@@ -341,56 +334,66 @@ export class Game extends Component<props_game, state_game, any> {
     }
 
     public TEST_ADAM(a: number, b: number): void {
-        this.appendTower({
-            id: Math.random(),
-            level: 1,
-            name: 'Adam',
-            life: 400,
-            armor: 40,
-            physical_dec: 0,
-            fire_resist: 0,
-            cold_resist: 0,
-            electric_resist: 0,
-            magic_dec: 0,
-            arr: a,
-            cor: b,
-            update: this.update
-        });
+        this.appendTower(Dict.getTowerInstance(TowerDict.Eve, 2, a, b)!);
     }
 
+
+    private MB: any = {
+        at6: () => {
+            this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
+        },
+        at10: () => {
+            this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
+        },
+        at14: () => {
+            this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
+        },
+        at18: () => {
+            for (let i: number = 0; i < 2; i++) {
+                this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
+            }
+        },
+        at26: () => {
+            this.appendInvator(Dict.getInvatorInstance(InvatorDict.MechanicalPain)!);
+        },
+        at32: () => {
+            this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
+        },
+        at38: () => {
+            for (let i: number = 0; i < 3; i++) {
+                this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
+            }
+        },
+        at44: () => {
+            for (let i: number = 0; i < 2; i++) {
+                this.appendInvator(Dict.getInvatorInstance(InvatorDict.MechanicalPain)!);
+            }
+        },
+        at50: () => {
+            for (let i: number = 0; i < 3; i++) {
+                this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
+            }
+        },
+        at70: () => {
+            alert("FINAL WAVE ! ");
+        },
+        at74: () => {
+            for (let i: number = 0; i < 5; i++) {
+                this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
+            }
+            for (let i: number = 0; i < 3; i++) {
+                this.appendInvator(Dict.getInvatorInstance(InvatorDict.MechanicalPain)!);
+            }
+        }
+    };
+
+    private went: number = 0;
+
     public TESTMB(): void {
-        // if (this.bullet_count < 20)
-        if (this.EnemyInstance.length < 8) {
-            if (Math.random() < 0) {
-                this.appendInvator({
-                    id: Math.random(),
-                    life: 500,
-                    name: 'Mechanical',
-                    armor: 60,
-                    fire_resist: 20,
-                    cold_resist: 0,
-                    electric_resist: -15,
-                    physical_dec: 0,
-                    magic_dec: 0,
-                    arr: parseInt((Math.random() * 6).toString()),
-                    update: this.update
-                });
-            }
-            else {
-                this.appendInvator({
-                    id: Math.random(),
-                    life: 500,
-                    name: 'MechanicalPain',
-                    armor: 60,
-                    fire_resist: 20,
-                    cold_resist: 0,
-                    electric_resist: -15,
-                    physical_dec: 0,
-                    magic_dec: 0,
-                    arr: parseInt((Math.random() * 6).toString()),
-                    update: this.update
-                });
-            }
+        this.went += 2;
+        if (this.MB[`at${this.went}`]) {
+            this.MB[`at${this.went}`]();
         }
     }
 }
+
