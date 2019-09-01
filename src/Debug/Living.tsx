@@ -51,19 +51,34 @@ export abstract class Tower extends Component<TowerProps, TowerState, any> {
     public constructor(props: TowerProps) {
         super(props);
         this.state = {
-            level: this.props.level,
+            level: 0,
             hp: this.props.life,
-            armor: this.props.armor,
+            armor: this.props.armor * (1 + Math.log(this.props.level + 1)),
             physical_dec: this.props.physical_dec,
-            fire_resist: this.props.fire_resist,
-            cold_resist: this.props.cold_resist,
-            electric_resist: this.props.electric_resist,
+            fire_resist: this.props.fire_resist + 15 * this.props.level,
+            cold_resist: this.props.cold_resist + 15 * this.props.level,
+            electric_resist: this.props.electric_resist + 15 * this.props.level,
             magic_dec: this.props.magic_dec,
             shield: null,
             action: Action.moving,
             pic: `rgba(255, 255, 255, 0.6)`
         };
         this.update = this.props.update.bind(this);
+    }
+
+    public setLevel(level: number): void {
+        let hp: number = parseInt((this.state.hp + this.props.life * 0.25).toString());
+        hp = hp > this.props.life ? this.props.life : hp;
+        this.setState({
+            level: level,
+            hp: hp,
+            armor: this.props.armor * (1 + Math.log(level + 1)),
+            physical_dec: this.props.physical_dec,
+            fire_resist: this.props.fire_resist + 15 * level,
+            cold_resist: this.props.cold_resist + 15 * level,
+            electric_resist: this.props.electric_resist + 15 * level,
+            magic_dec: this.props.magic_dec
+        });
     }
 
     protected update: (out: number) => void;
@@ -76,17 +91,13 @@ export abstract class Tower extends Component<TowerProps, TowerState, any> {
                 case 0:
                     return [``];
                 case 1:
-                    return [`HP: ${this.state.hp}/${this.props.life}`];
+                    return [`HP: ${this.state.hp}/${this.props.life} Lv${this.state.level}`];
                 case 2:
-                    return [`HP: ${this.state.hp}/${this.props.life}`,
+                    return [`HP: ${this.state.hp}/${this.props.life} Lv${this.state.level}`,
                         `Resistance:     A ${this.state.armor}  F ${this.state.fire_resist}`
                         + `C ${this.state.cold_resist}  E ${this.state.electric_resist}`];
             }
             return [``];
-        }
-    public getPosition: () => Array<number>
-        = () => {
-            return [this.props.arr, this.props.cor];
         }
     public getPic: () => string
         = () => {
@@ -108,7 +119,6 @@ export abstract class Tower extends Component<TowerProps, TowerState, any> {
                     url += `_normal`;
                     break;
             }
-            // url += `_${(new Date()).getMilliseconds() % 1000 / 200}`;
             url += `_0`;
             return url + `.png`;
         }
@@ -168,10 +178,33 @@ export abstract class Tower extends Component<TowerProps, TowerState, any> {
 
     protected animation: number = 0;
     protected waiting: number = 0;
+    protected lasted: number = 0;
     public tick: () => void
         = () => {
-            if (Game.start().state.gameState !== Game_State.going || !this.state || this.state.hp <= 0) {
+            if (Game.start().state.gameState !== Game_State.going || !this.state) {
                 return;
+            }
+            if (!this.alive()) {
+                this.update(this.props.id);
+                Game.start().unmount(this.props.arr, this.props.cor);
+            }
+            this.lasted += 20;
+            switch (this.lasted) {
+                case 10000:
+                    if (this.props.level >= 1) {
+                        this.setLevel(1);
+                    }
+                    break;
+                case 25000:
+                    if (this.props.level >= 2) {
+                        this.setLevel(2);
+                    }
+                    break;
+                case 40000:
+                    if (this.props.level >= 3) {
+                        this.setLevel(3);
+                    }
+                    break;
             }
             if (this.loaded < this.CD) {
                 this.loaded += 20;
@@ -672,7 +705,6 @@ export class Adam extends Tower {
                 return;
             }
             if (this.state.level === 0) {
-                //>>console.log("Pre: hit");
                 this.promise = this.hit;
                 this.waiting = 800;
                 return;
@@ -681,7 +713,6 @@ export class Adam extends Tower {
             switch (this.state.level) {
                 case 1:
                     if (r >= 0.8) {
-                        //>>console.log("Pre: 1");
                         this.promise = this.skill1;
                         this.waiting = 600;
                         return;
@@ -689,13 +720,11 @@ export class Adam extends Tower {
                     break;
                 case 2:
                     if (r >= 0.88) {
-                        //>>console.log("Pre: 2");
                         this.promise = this.skill2;
                         this.waiting = 200;
                         return;
                     }
                     else if (r >= 0.64) {
-                        //>>console.log("Pre: 1");
                         this.promise = this.skill1;
                         this.waiting = 600;
                         return;
@@ -703,19 +732,16 @@ export class Adam extends Tower {
                     break;
                 case 3:
                     if (r >= 0.92) {
-                        //>>console.log("Pre: 3");
                         this.promise = this.skill3;
                         this.waiting = 400;
                         return;
                     }
                     else if (r >= 0.76) {
-                        //>>console.log("Pre: 2");
                         this.promise = this.skill2;
                         this.waiting = 200;
                         return;
                     }
                     else if (r >= 0.52) {
-                        //>>console.log("Pre: 1");
                         this.promise = this.skill1;
                         this.waiting = 600;
                         return;
@@ -822,7 +848,6 @@ export class Eve extends Tower {
                     setTimeout(() => {
                         if (this.targets[t % this.targets.length]) {
                             this.targets[t % this.targets.length].component.hurt(64*(1+Math.random()*0.2) / Math.sqrt(times), 0, 0, 4);
-                            console.log(72*(1+Math.random()*0.2) / Math.sqrt(times), times);
                         }
                     }, 200 * t);
                 }
@@ -836,8 +861,8 @@ export class Eve extends Tower {
             if (Game.start().EnemyInstance[i].arr !== this.props.arr) {
                 continue;
             }
-            let cor: number = parseInt(((Game.start().EnemyInstance[i].pos - 24) / Game.start().getSpan()).toString());
-            if (cor >= this.props.cor && cor <= this.props.cor + 1) {
+            if (parseInt(((Game.start().EnemyInstance[i].pos - 4) / Game.start().getSpan()).toString()) >= this.props.cor - 1
+                && parseInt(((Game.start().EnemyInstance[i].pos - 44) / Game.start().getSpan()).toString()) <= this.props.cor + 1) {
                 this.targets.push(Game.start().EnemyInstance[i]);
             }
         }
@@ -853,8 +878,8 @@ export class Eve extends Tower {
                         <image xmlns={`http://www.w3.org/2000/svg`}
                             x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
                             y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                            width={`100px`} height={`100px`}
-                            transform={`translate(-50, -60)`}
+                            width={`114px`} height={`140px`}
+                            transform={`translate(-56, -76)`}
                             xlinkHref={require(`../pic/Adam/Eve_normal_0.png`)} />
                         <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
                             y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
@@ -884,8 +909,8 @@ export class Eve extends Tower {
                         <image xmlns={`http://www.w3.org/2000/svg`}
                             x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
                             y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                            width={`100px`} height={`100px`}
-                            transform={`translate(-50, -60)`}
+                            width={`114px`} height={`140px`}
+                            transform={`translate(-56, -76)`}
                             xlinkHref={require(`../pic/Adam/Eve_pre_0.png`)} />
                         <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
                             y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
@@ -915,8 +940,8 @@ export class Eve extends Tower {
                         <image xmlns={`http://www.w3.org/2000/svg`}
                             x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
                             y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                            width={`100px`} height={`100px`}
-                            transform={`translate(-50, -60)`}
+                            width={`114px`} height={`140px`}
+                            transform={`translate(-56, -76)`}
                             xlinkHref={require(`../pic/Adam/Eve_dur_0.png`)} />
                         <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
                             y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
@@ -946,8 +971,8 @@ export class Eve extends Tower {
                         <image xmlns={`http://www.w3.org/2000/svg`}
                             x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
                             y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                            width={`100px`} height={`100px`}
-                            transform={`translate(-50, -60)`}
+                            width={`114px`} height={`140px`}
+                            transform={`translate(-56, -76)`}
                             xlinkHref={require(`../pic/Adam/Eve_aft_0.png`)} />
                         <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
                             y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
@@ -977,7 +1002,8 @@ export class Eve extends Tower {
                         <image xmlns={`http://www.w3.org/2000/svg`}
                             x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
                             y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                            width={`100px`} height={`100px`}
+                            width={`114px`} height={`140px`}
+                            transform={`translate(-56, -76)`}
                             xlinkHref={require(`../pic/Adam/Eve_normal_0.png`)} />
                         <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
                             y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
@@ -1007,8 +1033,8 @@ export class Eve extends Tower {
                 <image xmlns={`http://www.w3.org/2000/svg`}
                     x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
                     y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                    width={`100px`} height={`100px`}
-                    transform={`translate(-50, -60)`}
+                    width={`114px`} height={`140px`}
+                    transform={`translate(-56, -76)`}
                     xlinkHref={require(`../pic/Adam/Eve_normal_0.png`)} />
                 <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.5) * Game.start().getSpan()}
                     y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}

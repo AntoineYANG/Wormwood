@@ -334,7 +334,12 @@ export class Game extends Component<props_game, state_game, any> {
     }
 
     public TEST_ADAM(a: number, b: number): void {
-        this.appendTower(Dict.getTowerInstance(TowerDict.Eve, 2, a, b)!);
+        if (this.tower_count % 2 == 0) {
+            this.appendTower(Dict.getTowerInstance(TowerDict.Adam, 1, a, b)!);
+        }
+        else {
+            this.appendTower(Dict.getTowerInstance(TowerDict.Eve, 2, a, b)!);
+        }
     }
 
 
@@ -360,17 +365,17 @@ export class Game extends Component<props_game, state_game, any> {
             this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
         },
         at38: () => {
-            for (let i: number = 0; i < 3; i++) {
+            for (let i: number = 0; i < 4; i++) {
                 this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
             }
         },
         at44: () => {
-            for (let i: number = 0; i < 2; i++) {
+            for (let i: number = 0; i < 3; i++) {
                 this.appendInvator(Dict.getInvatorInstance(InvatorDict.MechanicalPain)!);
             }
         },
         at50: () => {
-            for (let i: number = 0; i < 3; i++) {
+            for (let i: number = 0; i < 4; i++) {
                 this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
             }
         },
@@ -378,10 +383,10 @@ export class Game extends Component<props_game, state_game, any> {
             alert("FINAL WAVE ! ");
         },
         at74: () => {
-            for (let i: number = 0; i < 5; i++) {
+            for (let i: number = 0; i < 8; i++) {
                 this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
             }
-            for (let i: number = 0; i < 3; i++) {
+            for (let i: number = 0; i < 5; i++) {
                 this.appendInvator(Dict.getInvatorInstance(InvatorDict.MechanicalPain)!);
             }
         }

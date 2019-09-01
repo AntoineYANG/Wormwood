@@ -50,8 +50,11 @@ export default class Dict {
                 return {
                     ...base,
                     name: 'Eve',
-                    life: 440,
-                    armor: 120,
+                    life: 360,
+                    armor: 200,
+                    fire_resist: 10,
+                    cold_resist: 10,
+                    electric_resist: 25,
                     cor: col
                 };
         }
