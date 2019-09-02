@@ -14,7 +14,7 @@ export enum TowerDict {
 }
 
 export enum InvatorDict {
-    Mechanical, MechanicalPain
+    Mechanical, MechanicalPain, MechanicalShooter
 }
 
 
@@ -50,7 +50,7 @@ export default class Dict {
                 return {
                     ...base,
                     name: 'Eve',
-                    life: 360,
+                    life: 300,
                     armor: 200,
                     fire_resist: 10,
                     cold_resist: 10,
@@ -65,7 +65,7 @@ export default class Dict {
         arr = arr === -1 ? parseInt((Math.random() * Game.start().getArr()).toString()) : arr;
         col = col === -1 ? parseInt((Math.random() * Game.start().getCor()).toString()) : col;
         let base: {id: number, arr: number, physical_dec: number, fire_resist: number, cold_resist: number,
-                electric_resist: number, magic_dec: number, update: (out: number) => void}
+                electric_resist: number, magic_dec: number, update: (out: number) => void, speed: number}
             = {
                 id: Math.random(),
                 arr: arr,
@@ -74,7 +74,8 @@ export default class Dict {
                 cold_resist: 0,
                 electric_resist: 0,
                 magic_dec: 0,
-                update: Game.start().update
+                update: Game.start().update,
+                speed: 1
             };
         switch (item) {
             case InvatorDict.Mechanical:
@@ -90,6 +91,14 @@ export default class Dict {
                     life: 500,
                     name: 'MechanicalPain',
                     armor: 60
+                };
+            case InvatorDict.MechanicalShooter:
+                return {
+                    ...base,
+                    life: 300,
+                    name: 'MechanicalShooter',
+                    armor: 30,
+                    speed: 1.2
                 };
         }
         return null;

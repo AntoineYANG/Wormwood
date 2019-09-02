@@ -92,56 +92,6 @@ abstract class Bullet extends Component<Bullet_props, Bullet_state, any> {
     }
 }
 
-export class NoBullet extends Bullet {
-    public constructor(props: Bullet_props) {
-        super(props);
-        this.state = {
-            pos: this.props.pos,
-            alive: true
-        };
-    }
-
-    public componentDidMount(): void {
-        this.getPic = () => 'white';
-        setInterval(this.tick, 20);
-    }
-
-    public render(): JSX.Element {
-        return (
-            <image xmlns={`http://www.w3.org/2000/svg`} xlinkHref={require(`../pic/Bullet/BulletA.png`)}
-                x={this.state.pos} y={this.props.arr} width={0} height={0} opacity={0} />
-        )
-    }
-
-    public hit: () => boolean
-        = () => {
-            if (this.props.side === Side.defencer) {
-                for (let i: number = 0; i < Game.start().EnemyInstance.length; i++) {
-                    if (this.props.line !== Game.start().EnemyInstance[i].arr) {
-                        continue;
-                    }
-                    if (this.state.pos >= Game.start().EnemyInstance[i].pos - 36 + Game.start().getMargin(3) + Game.start().getPadding(0)
-                            && this.state.pos <= Game.start().getMargin(3) + Game.start().getPadding(0) + Game.start().EnemyInstance[i].pos) {
-                        Game.start().EnemyInstance[i].component.hurt(this.props.physical, this.props.fire, this.props.cold, this.props.electric);
-                        return true;
-                    }
-                }
-            }
-            else {
-                for (let i: number = 0; i < Game.start().TowerInstance.length; i++) {
-                    if (this.props.line !== Game.start().TowerInstance[i].arr) {
-                        continue;
-                    }
-                    if (this.state.pos >= Game.start().TowerInstance[i].pos - 36
-                            && this.state.pos <= Game.start().TowerInstance[i].pos) {
-                        Game.start().TowerInstance[i].component.hurt(this.props.physical, this.props.fire, this.props.cold, this.props.electric);
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-}
 
 export class BulletA extends Bullet {
     public constructor(props: Bullet_props) {
@@ -231,6 +181,7 @@ export class BulletB extends Bullet {
                     if (this.state.pos >= Game.start().EnemyInstance[i].pos - 36 + Game.start().getMargin(3) + Game.start().getPadding(0)
                             && this.state.pos <= Game.start().getMargin(3) + Game.start().getPadding(0) + Game.start().EnemyInstance[i].pos) {
                         Game.start().EnemyInstance[i].component.hurt(this.props.physical, this.props.fire, this.props.cold, this.props.electric);
+                        Game.start().EnemyInstance[i].component.control(500);
                     }
                 }
             }
@@ -248,5 +199,63 @@ export class BulletB extends Bullet {
             return false;
         }
 }
+
+export class BulletC extends Bullet {
+    public constructor(props: Bullet_props) {
+        super(props);
+        this.state = {
+            pos: this.props.pos,
+            alive: true
+        };
+    }
+
+    public componentDidMount(): void {
+        this.getPic = () => 'white';
+        setInterval(this.tick, 20);
+    }
+
+    public render(): JSX.Element {
+        return (
+            <image xmlns={`http://www.w3.org/2000/svg`}
+                x={this.state.pos} y={this.props.arr}
+                width={`48px`} height={`40px`}
+                transform={`translate(0, -42)`}
+                xlinkHref={require(`../pic/Bullet/BulletC.png`)} />
+        )
+    }
+
+    public hit: () => boolean
+        = () => {
+            if (this.props.side === Side.defencer) {
+                for (let i: number = 0; i < Game.start().EnemyInstance.length; i++) {
+                    if (this.props.line !== Game.start().EnemyInstance[i].arr) {
+                        continue;
+                    }
+                    if (this.state.pos >= Game.start().EnemyInstance[i].pos - 36 + Game.start().getMargin(3) + Game.start().getPadding(0)
+                            && this.state.pos <= Game.start().getMargin(3) + Game.start().getPadding(0) + Game.start().EnemyInstance[i].pos) {
+                        Game.start().EnemyInstance[i].component.hurt(this.props.physical, this.props.fire, this.props.cold, this.props.electric);
+                        return true;
+                    }
+                }
+            }
+            else {
+                for (let i: number = 0; i < Game.start().TowerInstance.length; i++) {
+                    if (this.props.line !== Game.start().TowerInstance[i].arr) {
+                        continue;
+                    }
+                    if (this.state.pos >= Game.start().TowerInstance[i].pos - 36
+                            && this.state.pos <= Game.start().TowerInstance[i].pos + 18) {
+                        if (!Game.start().TowerInstance[i].component.alive()) {
+                            continue;
+                        }
+                        Game.start().TowerInstance[i].component.hurt(this.props.physical, this.props.fire, this.props.cold, this.props.electric);
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+}
+
 
 export default Bullet;

@@ -5,8 +5,8 @@
  * @Last Modified time: 2019-09-01 03:07:46
 */
 
-import { Bullet_props, BulletA, BulletB, NoBullet } from "./Bullet";
-import { TowerProps, InvatorProps, Adam, Mechanical, InvatorState, Invator, Tower, TowerState, MechanicalPain, Eve } from "./Living";
+import { Bullet_props, BulletA, BulletB, BulletC } from "./Bullet";
+import { TowerProps, InvatorProps, Adam, Mechanical, InvatorState, Invator, Tower, TowerState, MechanicalPain, Eve, MechanicalShooter } from "./Living";
 import React, { Component, ReactInstance } from "react";
 import Dict, { TowerDict, InvatorDict } from "./Dict";
 
@@ -74,6 +74,11 @@ export class Game extends Component<props_game, state_game, any> {
         });
     }
 
+    public win(): void {
+        alert("VICTORY");
+        this.end();
+    }
+
     private tower_count: number = 0;
     private enemy_count: number = 0;
     private bullet_count: number = 0;
@@ -116,9 +121,9 @@ export class Game extends Component<props_game, state_game, any> {
         this.appendInvator = this.appendInvator.bind(this);
         this.appendBullet = this.appendBullet.bind(this);
         this.update = this.update.bind(this);
+        this.run = this.run.bind(this);
 
         this.TEST_ADAM = this.TEST_ADAM.bind(this);
-        this.TESTMB = this.TESTMB.bind(this);
 
         System = this;
     }
@@ -141,12 +146,12 @@ export class Game extends Component<props_game, state_game, any> {
         return System!;
     }
 
-    public appendTower(item: TowerProps): boolean {
-        if (this.set[item.arr][item.cor]) {
+    public appendTower(item: TowerDict, level: number, arr: number, cor: number): boolean {
+        if (this.set[arr][cor]) {
             return false;
         }
         let towers_update: Array<TowerProps> = this.state.towers;
-        towers_update.push(item);
+        towers_update.push(Dict.getTowerInstance(item, level, arr, cor)!);
         this.setState({
             towers: towers_update
         });
@@ -154,11 +159,11 @@ export class Game extends Component<props_game, state_game, any> {
         return true;
     }
 
-    public appendInvator(item: InvatorProps): boolean {
-        let decay: number = 2000 * Math.random();
+    public appendInvator(item: InvatorDict): boolean {
+        let decay: number = 3000 * Math.random();
         setTimeout(() => {
             let enemies_update: Array<InvatorProps> = this.state.enemies;
-            enemies_update.push(item);
+            enemies_update.push(Dict.getInvatorInstance(item)!);
             this.setState({
                 enemies: enemies_update
             });
@@ -187,13 +192,6 @@ export class Game extends Component<props_game, state_game, any> {
                 rect.push([i, j]);
             }
         }
-
-        // console.log(this.state.flyingItems);
-        // this.state.flyingItems.forEach(e => {
-        //     console.log(this.props.margin[3] + this.props.padding[0] + e.getPosition()[0],
-        //         this.props.margin[0] + e.getPosition()[1] * span_height);
-        // });
-        // console.log(this.state.towers);
 
         let towers: Array<TowerProps> = [];
         let enemies: Array<InvatorProps> = [];
@@ -253,15 +251,23 @@ export class Game extends Component<props_game, state_game, any> {
                 {
                     enemies.map(e => {
                         return (
+                            e.name === 'MechanicalShooter'
+                                ? <MechanicalShooter name={'MechanicalShooter'} key={e.id} id={e.id} life={e.life} armor={e.armor}
+                                    fire_resist={e.fire_resist} cold_resist={e.cold_resist} electric_resist={e.electric_resist}
+                                    update={this.update} physical_dec={e.physical_dec} magic_dec={e.magic_dec} arr={e.arr}
+                                    speed={e.speed} />
+                                :
                             e.name === 'MechanicalPain'
                                 ? <MechanicalPain name={'MechanicalPain'} key={e.id} id={e.id} life={e.life} armor={e.armor}
                                     fire_resist={e.fire_resist} cold_resist={e.cold_resist} electric_resist={e.electric_resist}
-                                    update={this.update} physical_dec={e.physical_dec} magic_dec={e.magic_dec} arr={e.arr} />
+                                    update={this.update} physical_dec={e.physical_dec} magic_dec={e.magic_dec} arr={e.arr}
+                                    speed={e.speed} />
                                 :
                             e.name === 'Mechanical'
                                 ? <Mechanical name={'Mechanical'} key={e.id} id={e.id} life={e.life} armor={e.armor}
                                     fire_resist={e.fire_resist} cold_resist={e.cold_resist} electric_resist={e.electric_resist}
-                                    update={this.update} physical_dec={e.physical_dec} magic_dec={e.magic_dec} arr={e.arr} />
+                                    update={this.update} physical_dec={e.physical_dec} magic_dec={e.magic_dec} arr={e.arr}
+                                    speed={e.speed} />
                                 : null
                         )
                     })
@@ -269,8 +275,8 @@ export class Game extends Component<props_game, state_game, any> {
                 {
                     this.state.flyingItems.map(e => {
                         return (
-                            e.type === 'NoBullet'
-                                ? <NoBullet {...e} key={e.id} />
+                            e.type === 'BulletC'
+                                ? <BulletC {...e} key={e.id} />
                                 :
                             e.type === 'BulletA'
                                 ? <BulletA {...e} key={e.id} />
@@ -287,7 +293,7 @@ export class Game extends Component<props_game, state_game, any> {
 
     public componentDidMount(): void {
         this.init();
-        setInterval(this.TESTMB, 2000);
+        setInterval(this.run, 2000);
     }
 
     public componentWillUnmount(): void {
@@ -334,68 +340,94 @@ export class Game extends Component<props_game, state_game, any> {
     }
 
     public TEST_ADAM(a: number, b: number): void {
-        if (this.tower_count % 2 == 0) {
-            this.appendTower(Dict.getTowerInstance(TowerDict.Adam, 1, a, b)!);
+        if (this.tower_count % 2 === 0) {
+            this.appendTower(TowerDict.Adam, 1, a, b);
         }
         else {
-            this.appendTower(Dict.getTowerInstance(TowerDict.Eve, 2, a, b)!);
+            this.appendTower(TowerDict.Eve, 2, a, b);
         }
     }
 
 
     private MB: any = {
         at6: () => {
-            this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
+            this.appendInvator(InvatorDict.Mechanical);
         },
         at10: () => {
-            this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
+            this.appendInvator(InvatorDict.Mechanical);
         },
         at14: () => {
-            this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
+            this.appendInvator(InvatorDict.Mechanical);
+            this.appendInvator(InvatorDict.MechanicalShooter);
         },
         at18: () => {
             for (let i: number = 0; i < 2; i++) {
-                this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
+                this.appendInvator(InvatorDict.Mechanical);
             }
         },
         at26: () => {
-            this.appendInvator(Dict.getInvatorInstance(InvatorDict.MechanicalPain)!);
+            this.appendInvator(InvatorDict.MechanicalPain);
         },
         at32: () => {
-            this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
+            this.appendInvator(InvatorDict.Mechanical);
+            this.appendInvator(InvatorDict.MechanicalShooter);
         },
         at38: () => {
-            for (let i: number = 0; i < 4; i++) {
-                this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
+            for (let i: number = 0; i < 2; i++) {
+                this.appendInvator(InvatorDict.Mechanical);
+            }
+            for (let i: number = 0; i < 2; i++) {
+                this.appendInvator(InvatorDict.MechanicalShooter);
             }
         },
         at44: () => {
+            this.appendInvator(InvatorDict.MechanicalShooter);
             for (let i: number = 0; i < 3; i++) {
-                this.appendInvator(Dict.getInvatorInstance(InvatorDict.MechanicalPain)!);
+                this.appendInvator(InvatorDict.MechanicalPain);
             }
         },
         at50: () => {
-            for (let i: number = 0; i < 4; i++) {
-                this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
+            for (let i: number = 0; i < 3; i++) {
+                this.appendInvator(InvatorDict.Mechanical);
+            }
+            for (let i: number = 0; i < 2; i++) {
+                this.appendInvator(InvatorDict.MechanicalShooter);
             }
         },
         at70: () => {
             alert("FINAL WAVE ! ");
         },
         at74: () => {
-            for (let i: number = 0; i < 8; i++) {
-                this.appendInvator(Dict.getInvatorInstance(InvatorDict.Mechanical)!);
+            for (let i: number = 0; i < 4; i++) {
+                this.appendInvator(InvatorDict.Mechanical);
             }
-            for (let i: number = 0; i < 5; i++) {
-                this.appendInvator(Dict.getInvatorInstance(InvatorDict.MechanicalPain)!);
+            for (let i: number = 0; i < 3; i++) {
+                this.appendInvator(InvatorDict.MechanicalPain);
             }
+        },
+        at76: () => {
+            for (let i: number = 0; i < 3; i++) {
+                this.appendInvator(InvatorDict.MechanicalShooter);
+            }
+            let check: () => void
+                = () => {
+                    if (this.state.enemies.length > 0 || this.state.flyingItems.length > 0) {
+                        setTimeout(() => {
+                            check();
+                        }, 1000);
+                    }
+                    else {
+                        this.win();
+                    }
+                };
+            check();
         }
     };
 
     private went: number = 0;
 
-    public TESTMB(): void {
-        this.went += 2;
+    public run(): void {
+        this.went++;
         if (this.MB[`at${this.went}`]) {
             this.MB[`at${this.went}`]();
         }
