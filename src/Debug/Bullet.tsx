@@ -148,6 +148,8 @@ export class BulletA extends Bullet {
 }
 
 export class BulletB extends Bullet {
+    private rate: number = 1;
+
     public constructor(props: Bullet_props) {
         super(props);
         this.state = {
@@ -180,8 +182,9 @@ export class BulletB extends Bullet {
                     }
                     if (this.state.pos >= Game.start().EnemyInstance[i].pos - 36 + Game.start().getMargin(3) + Game.start().getPadding(0)
                             && this.state.pos <= Game.start().getMargin(3) + Game.start().getPadding(0) + Game.start().EnemyInstance[i].pos) {
-                        Game.start().EnemyInstance[i].component.hurt(this.props.physical, this.props.fire, this.props.cold, this.props.electric);
+                        Game.start().EnemyInstance[i].component.hurt(this.props.physical * this.rate, this.props.fire, this.props.cold, this.props.electric);
                         Game.start().EnemyInstance[i].component.control(500);
+                        this.rate = this.rate > 0.25 ? this.rate - 0.25 : 0.25;
                     }
                 }
             }
@@ -192,7 +195,8 @@ export class BulletB extends Bullet {
                     }
                     if (this.state.pos + 50 >= Game.start().TowerInstance[i].pos - 8
                             && this.state.pos + 50 <= Game.start().TowerInstance[i].pos + 8) {
-                        Game.start().TowerInstance[i].component.hurt(this.props.physical, this.props.fire, this.props.cold, this.props.electric);
+                        Game.start().TowerInstance[i].component.hurt(this.props.physical * this.rate, this.props.fire, this.props.cold, this.props.electric);
+                        this.rate = this.rate > 0.25 ? this.rate - 0.25 : 0.25;
                     }
                 }
             }

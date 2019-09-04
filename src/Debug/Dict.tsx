@@ -14,7 +14,7 @@ export enum TowerDict {
 }
 
 export enum InvatorDict {
-    Mechanical, MechanicalPain, MechanicalShooter
+    Mechanical, MechanicalPain, MechanicalShooter, MechanicalHuge
 }
 
 
@@ -99,6 +99,14 @@ export default class Dict {
                     name: 'MechanicalShooter',
                     armor: 30,
                     speed: 1.2
+                };
+            case InvatorDict.MechanicalHuge:
+                return {
+                    ...base,
+                    life: 1500,
+                    name: 'MechanicalHuge',
+                    armor: 1000,
+                    speed: 0.7
                 };
         }
         return null;

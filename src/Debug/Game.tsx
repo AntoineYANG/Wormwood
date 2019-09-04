@@ -6,7 +6,7 @@
 */
 
 import { Bullet_props, BulletA, BulletB, BulletC } from "./Bullet";
-import { TowerProps, InvatorProps, Adam, Mechanical, InvatorState, Invator, Tower, TowerState, MechanicalPain, Eve, MechanicalShooter } from "./Living";
+import { TowerProps, InvatorProps, Adam, Mechanical, InvatorState, Invator, Tower, TowerState, MechanicalPain, Eve, MechanicalShooter, MechanicalHuge } from "./Living";
 import React, { Component, ReactInstance } from "react";
 import Dict, { TowerDict, InvatorDict } from "./Dict";
 
@@ -251,6 +251,12 @@ export class Game extends Component<props_game, state_game, any> {
                 {
                     enemies.map(e => {
                         return (
+                            e.name === 'MechanicalHuge'
+                                ? <MechanicalHuge name={'MechanicalHuge'} key={e.id} id={e.id} life={e.life} armor={e.armor}
+                                    fire_resist={e.fire_resist} cold_resist={e.cold_resist} electric_resist={e.electric_resist}
+                                    update={this.update} physical_dec={e.physical_dec} magic_dec={e.magic_dec} arr={e.arr}
+                                    speed={e.speed} />
+                                :
                             e.name === 'MechanicalShooter'
                                 ? <MechanicalShooter name={'MechanicalShooter'} key={e.id} id={e.id} life={e.life} armor={e.armor}
                                     fire_resist={e.fire_resist} cold_resist={e.cold_resist} electric_resist={e.electric_resist}
@@ -365,14 +371,17 @@ export class Game extends Component<props_game, state_game, any> {
                 this.appendInvator(InvatorDict.Mechanical);
             }
         },
-        at26: () => {
+        at32: () => {
             this.appendInvator(InvatorDict.MechanicalPain);
         },
-        at32: () => {
+        at38: () => {
             this.appendInvator(InvatorDict.Mechanical);
             this.appendInvator(InvatorDict.MechanicalShooter);
         },
-        at38: () => {
+        at40: () => {
+            this.appendInvator(InvatorDict.MechanicalHuge);
+        },
+        at44: () => {
             for (let i: number = 0; i < 2; i++) {
                 this.appendInvator(InvatorDict.Mechanical);
             }
@@ -380,13 +389,13 @@ export class Game extends Component<props_game, state_game, any> {
                 this.appendInvator(InvatorDict.MechanicalShooter);
             }
         },
-        at44: () => {
+        at54: () => {
             this.appendInvator(InvatorDict.MechanicalShooter);
             for (let i: number = 0; i < 3; i++) {
                 this.appendInvator(InvatorDict.MechanicalPain);
             }
         },
-        at50: () => {
+        at60: () => {
             for (let i: number = 0; i < 3; i++) {
                 this.appendInvator(InvatorDict.Mechanical);
             }
@@ -394,20 +403,23 @@ export class Game extends Component<props_game, state_game, any> {
                 this.appendInvator(InvatorDict.MechanicalShooter);
             }
         },
-        at70: () => {
+        at72: () => {
             alert("FINAL WAVE ! ");
         },
         at74: () => {
-            for (let i: number = 0; i < 4; i++) {
+            for (let i: number = 0; i < 3; i++) {
                 this.appendInvator(InvatorDict.Mechanical);
             }
-            for (let i: number = 0; i < 3; i++) {
+            for (let i: number = 0; i < 2; i++) {
                 this.appendInvator(InvatorDict.MechanicalPain);
             }
         },
         at76: () => {
             for (let i: number = 0; i < 3; i++) {
                 this.appendInvator(InvatorDict.MechanicalShooter);
+            }
+            for (let i: number = 0; i < 2; i++) {
+                this.appendInvator(InvatorDict.MechanicalHuge);
             }
             let check: () => void
                 = () => {

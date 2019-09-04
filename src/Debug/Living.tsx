@@ -82,6 +82,19 @@ export abstract class Tower extends Component<TowerProps, TowerState, any> {
     }
 
     protected update: (out: number) => void;
+
+    public active(): boolean {
+        for (let i: number = 0; i < Game.start().EnemyInstance.length; i++) {
+            if (Game.start().EnemyInstance[i].arr !== this.props.arr) {
+                continue;
+            }
+            if (parseInt(((Game.start().EnemyInstance[i].pos - 4) / Game.start().getSpan()).toString()) >= this.props.cor
+                && parseInt(((Game.start().EnemyInstance[i].pos - 44) / Game.start().getSpan()).toString()) < Game.start().getCor()) {
+                return true;
+            }
+        }
+        return false;
+    }
     
     public alive: () => boolean
         = () => this.state.hp > 0;
@@ -158,7 +171,7 @@ export abstract class Tower extends Component<TowerProps, TowerState, any> {
                 hp: hp
             });
         }
-        else if (hp <= 0) {
+        if (hp <= 0) {
             this.update(this.props.id);
             Game.start().unmount(this.props.arr, this.props.cor);
         }
@@ -181,12 +194,8 @@ export abstract class Tower extends Component<TowerProps, TowerState, any> {
     protected lasted: number = 0;
     public tick: () => void
         = () => {
-            if (Game.start().state.gameState !== Game_State.going || !this.state) {
+            if (Game.start().state.gameState !== Game_State.going || !this.state || !this.alive()) {
                 return;
-            }
-            if (!this.alive()) {
-                this.update(this.props.id);
-                Game.start().unmount(this.props.arr, this.props.cor);
             }
             this.lasted += 40;
             switch (this.lasted) {
@@ -213,6 +222,9 @@ export abstract class Tower extends Component<TowerProps, TowerState, any> {
                 this.animation = 0;
                 switch (this.state.action) {
                     case Action.moving:
+                        if (!this.active()) {
+                            break;
+                        }
                         this.prepare();
                         if (this.promise) {
                             this.setState({
@@ -340,7 +352,9 @@ export abstract class Invator extends Component<InvatorProps, InvatorState, any>
     protected waiting: number = 0;
 
     public active(): boolean {
-        return Game.start().set[this.props.arr][parseInt(((this.state.pos - 24) / Game.start().getSpan()).toString())] !== null
+        return Game.start().set[this.props.arr][parseInt(((this.state.pos - 24) / Game.start().getSpan()).toString()) + 1] !== null
+            && Game.start().set[this.props.arr][parseInt(((this.state.pos - 24) / Game.start().getSpan()).toString()) + 1] !== void 0
+            || Game.start().set[this.props.arr][parseInt(((this.state.pos - 24) / Game.start().getSpan()).toString())] !== null
             && Game.start().set[this.props.arr][parseInt(((this.state.pos - 24) / Game.start().getSpan()).toString())] !== void 0;
     }
 
@@ -476,6 +490,15 @@ export abstract class Invator extends Component<InvatorProps, InvatorState, any>
     public tick(): void {
         if (Game.start().state.gameState !== Game_State.going || !this.state || !this.alive() || this.state.pos <= 0) {
             return;
+        }
+        for (let i: number = 0; i < Game.start().TowerInstance.length; i++) {
+            if (Game.start().TowerInstance[i].arr !== this.props.arr) {
+                continue;
+            }
+            if (!Game.start().TowerInstance[i].component.alive()) {
+                Game.start().TowerInstance[i].component.hurt(1, 0, 0, 0);
+                break;
+            }
         }
         if (this.controlling > 0) {
             if (this.controlled < this.controlling) {
@@ -693,19 +716,6 @@ export class Adam extends Tower {
     }
 
     protected prepare = () => {
-            let flag: boolean = false;
-            for (let i: number = 0; i < Game.start().EnemyInstance.length; i++) {
-                if (this.props.arr === Game.start().EnemyInstance[i].arr) {
-                    flag = true;
-                    break;
-                }
-            }
-            if (!flag) {
-                this.promise = null;
-                this.animation = Action.moving;
-                this.waiting = -1;
-                return;
-            }
             if (this.state.level === 0) {
                 this.promise = this.hit;
                 this.waiting = 800;
@@ -784,12 +794,12 @@ export class Adam extends Tower {
                 type: 'BulletB',
                 side: Side.defencer,
                 pic: 'orange',
-                physical: 70,
+                physical: 80,
                 fire: 0,
                 cold: 0,
                 electric: 0,
                 debuff: null,
-                speed: 36,
+                speed: 30,
                 arr: Game.start().getMargin(0) + (this.props.arr + 0.4) * Game.start().getLineHeight(),
                 line: this.props.arr,
                 pos: Game.start().getMargin(3) + Game.start().getPadding(0) + (this.props.cor + 0.7) * Game.start().getSpan(),
@@ -1063,12 +1073,6 @@ export class Eve extends Tower {
     }
 
     protected prepare = () => {
-            if (!this.active()) {
-                this.promise = null;
-                this.animation = Action.moving;
-                this.waiting = -1;
-                return;
-            }
             if (this.state.level === 0) {
                 this.promise = this.hit;
                 this.waiting = 200;
@@ -1159,7 +1163,7 @@ export class Mechanical extends Invator {
                     continue;
                 }
                 if (Game.start().TowerInstance[i].pos >= this.state.pos + Game.start().getPadding(0) - Game.start().getSpan() - 20
-                        && Game.start().TowerInstance[i].pos <= this.state.pos + Game.start().getPadding(0) + 20) {
+                        && Game.start().TowerInstance[i].pos <= this.state.pos + Game.start().getPadding(0) + Game.start().getSpan()) {
                     Game.start().TowerInstance[i].component.hurt(80, 0, 0, 0);
                 }
             }
@@ -1358,7 +1362,7 @@ export class MechanicalPain extends Invator {
                     continue;
                 }
                 if (Game.start().TowerInstance[i].pos >= this.state.pos + Game.start().getPadding(0) - Game.start().getSpan() - 20
-                        && Game.start().TowerInstance[i].pos <= this.state.pos + Game.start().getPadding(0) + 20) {
+                        && Game.start().TowerInstance[i].pos <= this.state.pos + Game.start().getPadding(0) + Game.start().getSpan()) {
                     Game.start().TowerInstance[i].component.hurt(80, 0, 0, 0);
                 }
             }
@@ -2026,6 +2030,473 @@ export class MechanicalShooter extends Invator {
                         </text>
                     </>
                 )
+        }
+        return (
+            <></>
+        )
+    }
+}
+
+export class MechanicalHuge extends Invator {
+    protected prepare = () => {
+        this.promise = this.hit;
+        this.waiting = 600;
+        return;
+    }
+
+    public move: () => boolean
+        = () => {
+            if (this.boomCD >= 14000 && this.boomCD < 15200) {
+                return true;
+            }
+            let speed: number = this.boomCD >= 14000 ? this.state.speed * 3 : this.state.speed;
+            if (this.active()) {
+                if (this.animation >= this.waiting) {
+                    this.animation = 0;
+                    switch (this.state.action) {
+                        case Action.moving:
+                            this.prepare();
+                            this.setState({
+                                action: Action.pre_ani
+                            });
+                            break;
+                        case Action.pre_ani:
+                            this.act();
+                            this.setState({
+                                action: Action.dur_ani
+                            });
+                            break;
+                        case Action.dur_ani:
+                            this.setState({
+                                action: Action.aft_ani
+                            });
+                            this.waiting = 200;
+                            break;
+                        case Action.aft_ani:
+                            this.setState({
+                                action: Action.moving
+                            });
+                            this.waiting = -1;
+                            break;
+                    }
+                    this.animation = 0;
+                }
+                else {
+                    this.animation += 40;
+                }
+                return true;
+            }
+            else {
+                this.setState({
+                    action: Action.moving
+                });
+                this.waiting = -1;
+            }
+            let pos: number = this.state.pos;
+            if (this.state.action === Action.moving) {
+                pos -= speed;
+            }
+            if (Game.start().state.gameState === Game_State.going && pos < 0) {
+                alert(" --<  GAME OVER  >-- ");
+                Game.start().end();
+                return false;
+            }
+            this.setState({
+                pos: pos
+            });
+            return true;
+        }
+
+    private boomCD: number = 2000;
+
+    public tick(): void {
+        if (Game.start().state.gameState !== Game_State.going || !this.state || !this.alive() || this.state.pos <= 0) {
+            return;
+        }
+        for (let i: number = 0; i < Game.start().TowerInstance.length; i++) {
+            if (Game.start().TowerInstance[i].arr !== this.props.arr) {
+                continue;
+            }
+            if (!Game.start().TowerInstance[i].component.alive()) {
+                Game.start().TowerInstance[i].component.hurt(1, 0, 0, 0);
+                break;
+            }
+        }
+        if (this.controlling > 0) {
+            if (this.controlled < this.controlling) {
+                this.controlled += 100;
+                return;
+            }
+            else {
+                this.controlling = 0;
+                this.controlled = 0;
+                this.setState({
+                    action: Action.moving
+                });
+            }
+        }
+        if (this.boomCD < 15200) {
+            this.boomCD += 40;
+        }
+        let alive: boolean = this.move();
+        if (!alive) {
+            this.update(this.props.id);
+        }
+    }
+
+    protected hit: () => boolean
+        = () => {
+            for (let i: number = 0; i < Game.start().TowerInstance.length; i++) {
+                if (Game.start().TowerInstance[i].arr !== this.props.arr) {
+                    continue;
+                }
+                if (Game.start().TowerInstance[i].pos >= this.state.pos + Game.start().getPadding(0) - Game.start().getSpan() - 20
+                        && Game.start().TowerInstance[i].pos <= this.state.pos + Game.start().getPadding(0) + Game.start().getSpan()) {
+                    if (this.boomCD >= 14000) {
+                        Game.start().TowerInstance[i].component.hurt(500, 0, 0, 0);
+                        this.boomCD = 0;
+                        this.waiting = 2000;
+                    }
+                    else {
+                        Game.start().TowerInstance[i].component.hurt(200, 0, 0, 0);
+                        this.waiting = 800;
+                    }
+                }
+            }
+            return true;
+        };
+
+    public render(): JSX.Element {
+        if (this.state.hp === 0) {
+            return (
+                <>
+                    <image xmlns={`http://www.w3.org/2000/svg`}
+                        x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                        y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                        width={`150px`} height={`150px`} ref={"dom"}
+                        transform={`translate(-136, -84)`}
+                        xlinkHref={require(`../pic/Invator/MechanicalHuge_die_0.png`)} />
+                </>
+            )
+        }
+        let info: Array<string> = this.getInfo(2);
+        if (this.boomCD >= 14000) {
+            switch (this.state.action) {
+                case Action.moving:
+                    return (
+                        <>
+                            <image xmlns={`http://www.w3.org/2000/svg`}
+                                x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`180px`} height={`180px`} ref={"dom"}
+                                transform={`translate(-86, -130)`}
+                                xlinkHref={require(`../pic/Invator/MechanicalHuge_R_normal_0.png`)} />
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`50px`} height={`6px`} transform={`translate(-20, -140)`}
+                                style={{
+                                    fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                                }}/>
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -139)`}
+                                style={{
+                                    fill: this.state.hp / this.props.life < 0.2 ? '#f60' : '#cc9', stroke: 'none'
+                                }}/>
+                            <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                dx={-25} dy={-144} style={{
+                                    fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                    WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                                }}>
+                                { info[0] }
+                            </text>
+                        </>
+                    )
+                case Action.pre_ani:
+                    return (
+                        <>
+                            <image xmlns={`http://www.w3.org/2000/svg`}
+                                x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`208px`} height={`208px`} ref={"dom"}
+                                transform={`translate(-105, -158)`}
+                                xlinkHref={require(`../pic/Invator/MechanicalHuge_R_pre_0.png`)} />
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`50px`} height={`6px`} transform={`translate(-20, -140)`}
+                                style={{
+                                    fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                                }}/>
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -139)`}
+                                style={{
+                                    fill: this.state.hp / this.props.life < 0.2 ? '#f60' : '#cc9', stroke: 'none'
+                                }}/>
+                            <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                dx={-25} dy={-144} style={{
+                                    fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                    WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                                }}>
+                                { info[0] }
+                            </text>
+                        </>
+                    )
+                case Action.dur_ani:
+                    return (
+                        <>
+                            <image xmlns={`http://www.w3.org/2000/svg`}
+                                x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`164px`} height={`164px`} ref={"dom"}
+                                transform={`translate(-102, -104)`}
+                                xlinkHref={require(`../pic/Invator/MechanicalHuge_R_dur_0.png`)} />
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`50px`} height={`6px`} transform={`translate(-20, -140)`}
+                                style={{
+                                    fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                                }}/>
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -139)`}
+                                style={{
+                                    fill: this.state.hp / this.props.life < 0.2 ? '#f60' : '#cc9', stroke: 'none'
+                                }}/>
+                            <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                dx={-25} dy={-144} style={{
+                                    fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                    WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                                }}>
+                                { info[0] }
+                            </text>
+                        </>
+                    )
+                case Action.aft_ani:
+                    return (
+                        <>
+                            <image xmlns={`http://www.w3.org/2000/svg`}
+                                x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`164px`} height={`164px`} ref={"dom"}
+                                transform={`translate(-77, -119)`}
+                                xlinkHref={require(`../pic/Invator/MechanicalHuge_aft_0.png`)} />
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`50px`} height={`6px`} transform={`translate(-20, -140)`}
+                                style={{
+                                    fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                                }}/>
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -139)`}
+                                style={{
+                                    fill: this.state.hp / this.props.life < 0.2 ? '#f60' : '#cc9', stroke: 'none'
+                                }}/>
+                            <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                dx={-25} dy={-144} style={{
+                                    fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                    WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                                }}>
+                                { info[0] }
+                            </text>
+                        </>
+                    )
+                case Action.controlled:
+                    return (
+                        <>
+                            <image xmlns={`http://www.w3.org/2000/svg`}
+                                x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`180px`} height={`180px`} ref={"dom"}
+                                transform={`translate(-86, -130)`}
+                                xlinkHref={require(`../pic/Invator/MechanicalHuge_R_controlled_0.png`)} />
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`50px`} height={`6px`} transform={`translate(-20, -140)`}
+                                style={{
+                                    fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                                }}/>
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -139)`}
+                                style={{
+                                    fill: '#f60', stroke: 'none'
+                                }}/>
+                            <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                dx={-25} dy={-144} style={{
+                                    fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                    WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                                }}>
+                                { info[0] }
+                            </text>
+                        </>
+                    )
+            }
+        }
+        else {
+            switch (this.state.action) {
+                case Action.moving:
+                    return (
+                        <>
+                            <image xmlns={`http://www.w3.org/2000/svg`}
+                                x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`180px`} height={`180px`} ref={"dom"}
+                                transform={`translate(-86, -130)`}
+                                xlinkHref={require(`../pic/Invator/MechanicalHuge_normal_0.png`)} />
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`50px`} height={`6px`} transform={`translate(-20, -140)`}
+                                style={{
+                                    fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                                }}/>
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -139)`}
+                                style={{
+                                    fill: this.state.hp / this.props.life < 0.2 ? '#f60' : '#cc9', stroke: 'none'
+                                }}/>
+                            <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                dx={-25} dy={-144} style={{
+                                    fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                    WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                                }}>
+                                { info[0] }
+                            </text>
+                        </>
+                    )
+                case Action.pre_ani:
+                    return (
+                        <>
+                            <image xmlns={`http://www.w3.org/2000/svg`}
+                                x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`208px`} height={`208px`} ref={"dom"}
+                                transform={`translate(-105, -158)`}
+                                xlinkHref={require(`../pic/Invator/MechanicalHuge_pre_0.png`)} />
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`50px`} height={`6px`} transform={`translate(-20, -140)`}
+                                style={{
+                                    fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                                }}/>
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -139)`}
+                                style={{
+                                    fill: this.state.hp / this.props.life < 0.2 ? '#f60' : '#cc9', stroke: 'none'
+                                }}/>
+                            <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                dx={-25} dy={-144} style={{
+                                    fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                    WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                                }}>
+                                { info[0] }
+                            </text>
+                        </>
+                    )
+                case Action.dur_ani:
+                    return (
+                        <>
+                            <image xmlns={`http://www.w3.org/2000/svg`}
+                                x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`164px`} height={`164px`} ref={"dom"}
+                                transform={`translate(-102, -104)`}
+                                xlinkHref={require(`../pic/Invator/MechanicalHuge_dur_0.png`)} />
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`50px`} height={`6px`} transform={`translate(-20, -140)`}
+                                style={{
+                                    fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                                }}/>
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -139)`}
+                                style={{
+                                    fill: this.state.hp / this.props.life < 0.2 ? '#f60' : '#cc9', stroke: 'none'
+                                }}/>
+                            <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                dx={-25} dy={-144} style={{
+                                    fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                    WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                                }}>
+                                { info[0] }
+                            </text>
+                        </>
+                    )
+                case Action.aft_ani:
+                    return (
+                        <>
+                            <image xmlns={`http://www.w3.org/2000/svg`}
+                                x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`164px`} height={`164px`} ref={"dom"}
+                                transform={`translate(-77, -119)`}
+                                xlinkHref={require(`../pic/Invator/MechanicalHuge_aft_0.png`)} />
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`50px`} height={`6px`} transform={`translate(-20, -140)`}
+                                style={{
+                                    fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                                }}/>
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -139)`}
+                                style={{
+                                    fill: this.state.hp / this.props.life < 0.2 ? '#f60' : '#cc9', stroke: 'none'
+                                }}/>
+                            <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                dx={-25} dy={-144} style={{
+                                    fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                    WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                                }}>
+                                { info[0] }
+                            </text>
+                        </>
+                    )
+                case Action.controlled:
+                    return (
+                        <>
+                            <image xmlns={`http://www.w3.org/2000/svg`}
+                                x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`180px`} height={`180px`} ref={"dom"}
+                                transform={`translate(-86, -130)`}
+                                xlinkHref={require(`../pic/Invator/MechanicalHuge_controlled_0.png`)} />
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`50px`} height={`6px`} transform={`translate(-20, -140)`}
+                                style={{
+                                    fill: 'none', stroke: '#cc9', strokeWidth: 0.6
+                                }}/>
+                            <rect x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                width={`${48 * this.state.hp / this.props.life}px`} height={`4px`} transform={`translate(-19, -139)`}
+                                style={{
+                                    fill: '#f60', stroke: 'none'
+                                }}/>
+                            <text x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
+                                y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
+                                dx={-25} dy={-144} style={{
+                                    fill: `#aaa`, fillOpacity: 0.8, fontSize: 12, fontStyle: 'bold',
+                                    WebkitUserSelect: 'none', MozUserSelect: 'none', userSelect: 'none'
+                                }}>
+                                { info[0] }
+                            </text>
+                        </>
+                    )
+            }
         }
         return (
             <></>
