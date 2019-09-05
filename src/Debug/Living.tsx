@@ -177,6 +177,13 @@ export abstract class Tower extends Component<TowerProps, TowerState, any> {
         }
     }
 
+    public ignite(f: number, lasting: number, declineBySecond: number = 0): void {
+        let damage: number = f;
+        for (let t: number = 0; t < lasting; t += 250) {
+            setTimeout(() => this.hurt(0, (damage - declineBySecond * t / 1000) / 4, 0, 0), t);
+        }
+    }
+
 
     public componentDidMount(): void {
         Game.start().mount(this, this.props.arr, this.props.cor);
@@ -352,10 +359,10 @@ export abstract class Invator extends Component<InvatorProps, InvatorState, any>
     protected waiting: number = 0;
 
     public active(): boolean {
-        return Game.start().set[this.props.arr][parseInt(((this.state.pos - 24) / Game.start().getSpan()).toString()) + 1] !== null
-            && Game.start().set[this.props.arr][parseInt(((this.state.pos - 24) / Game.start().getSpan()).toString()) + 1] !== void 0
-            || Game.start().set[this.props.arr][parseInt(((this.state.pos - 24) / Game.start().getSpan()).toString())] !== null
-            && Game.start().set[this.props.arr][parseInt(((this.state.pos - 24) / Game.start().getSpan()).toString())] !== void 0;
+        return (Game.start().set[this.props.arr][parseInt(((this.state.pos - 24) / Game.start().getSpan()).toString()) + 1] !== null
+            && Game.start().set[this.props.arr][parseInt(((this.state.pos - 24) / Game.start().getSpan()).toString()) + 1] !== void 0)
+            || (Game.start().set[this.props.arr][parseInt(((this.state.pos - 24) / Game.start().getSpan()).toString())] !== null
+            && Game.start().set[this.props.arr][parseInt(((this.state.pos - 24) / Game.start().getSpan()).toString())] !== void 0);
     }
 
     public move: () => boolean
@@ -450,9 +457,22 @@ export abstract class Invator extends Component<InvatorProps, InvatorState, any>
             this.setState({
                 hp: hp
             });
+            this.didHurt(p, f, c, e);
         }
         else if (hp <= 0) {
-            setTimeout(() => this.update(this.props.id), 600);
+            this.willDie();
+            this.willDie = () => {};
+            setTimeout(() => this.update(this.props.id), 800);
+        }
+    }
+
+    protected didHurt(p: number, f: number, c: number, e: number): void {}
+    protected willDie(): void {}
+
+    public ignite(f: number, lasting: number, declineBySecond: number = 0): void {
+        let damage: number = f;
+        for (let t: number = 0; t < lasting; t += 250, damage -= declineBySecond / 4) {
+            setTimeout(() => this.hurt(0, damage / 4, 0, 0), t);
         }
     }
 
@@ -1390,7 +1410,7 @@ export class MechanicalPain extends Invator {
         }
         if (this.animation === Action.moving || this.animation === Action.aft_ani) {
             if (Math.random() >= 0.85) {
-                this.shield = new PhysicalShield(this, 300, 5000);
+                this.shield = new PhysicalShield(this, 320, 5000);
                 this.shieldLoaded = 0;
                 this.setState({
                     speed: 0
@@ -2040,7 +2060,12 @@ export class MechanicalShooter extends Invator {
 export class MechanicalHuge extends Invator {
     protected prepare = () => {
         this.promise = this.hit;
-        this.waiting = 600;
+        if (this.boomCD >= 15200) {
+            this.waiting = 150;
+        }
+        else {
+            this.waiting = 600;
+        }
         return;
     }
 
@@ -2049,7 +2074,7 @@ export class MechanicalHuge extends Invator {
             if (this.boomCD >= 14000 && this.boomCD < 15200) {
                 return true;
             }
-            let speed: number = this.boomCD >= 14000 ? this.state.speed * 3 : this.state.speed;
+            let speed: number = this.boomCD >= 14000 ? this.state.speed * 3.6 : this.state.speed;
             if (this.active()) {
                 if (this.animation >= this.waiting) {
                     this.animation = 0;
@@ -2144,6 +2169,57 @@ export class MechanicalHuge extends Invator {
         }
     }
 
+    public hurt(physical: number, fire: number = 0, cold: number = 0, electric: number = 0): void {
+        let damage: {physical: number, fire: number, cold: number, electric: number}
+            = {physical: physical, fire: fire, cold: cold, electric: electric};
+        if (this.shield) {
+            this.shield = this.shield!.hurt(damage) ? this.shield : null;
+        }
+        let p: number = (damage.physical * this.props.life / (this.props.life + this.state.armor)) - this.state.physical_dec;
+        p = p > 0 ? p : 0;
+        let f: number = damage.fire * (100 - this.state.fire_resist) / 100;
+        f = f > this.state.magic_dec ? f - this.state.magic_dec : f;
+        let c: number = damage.cold * (100 - this.state.cold_resist) / 100;
+        c = c > this.state.magic_dec ? c - this.state.magic_dec : c;
+        let e: number = damage.electric * (100 - this.state.electric_resist) / 100;
+        e = e > this.state.magic_dec ? e - this.state.magic_dec : e;
+        let hp: number = this.state.hp - (p + f + c + e);
+        hp = hp >= 0 ? hp <= this.props.life ? parseInt((hp + 0.5).toString()) : this.props.life : 0;
+        if (hp !== this.state.hp) {
+            this.setState({
+                hp: hp
+            });
+            this.didHurt(p, f, c, e);
+        }
+        else if (hp <= 0) {
+            this.willDie();
+            this.willDie = () => {};
+            setTimeout(() => this.update(this.props.id), 2000);
+        }
+    }
+
+    protected didHurt(p: number, f: number, c: number, e: number): void {
+        this.boomCD += 200;
+    }
+
+    protected willDie(): void {
+        for (let i: number = 0; i < Game.start().TowerInstance.length; i++) {
+            if (Game.start().TowerInstance[i].arr !== this.props.arr) {
+                continue;
+            }
+            if (Game.start().TowerInstance[i].pos >= this.state.pos + Game.start().getPadding(0) - Game.start().getSpan() * 1.5 - 20
+                    && Game.start().TowerInstance[i].pos <= this.state.pos + Game.start().getPadding(0) + Game.start().getSpan()) {
+                Game.start().TowerInstance[i].component.hurt(300, 0, 0, 0);
+                Game.start().TowerInstance[i].component.ignite(50, 5000, 10);
+            }
+            else if (Game.start().TowerInstance[i].pos >= this.state.pos + Game.start().getPadding(0) - Game.start().getSpan() * 2.5 - 20
+                    && Game.start().TowerInstance[i].pos <= this.state.pos + Game.start().getPadding(0) + Game.start().getSpan()) {
+                Game.start().TowerInstance[i].component.hurt(60, 0, 0, 0);
+                Game.start().TowerInstance[i].component.ignite(40, 4000, 10);
+            }
+        }
+    }
+
     protected hit: () => boolean
         = () => {
             for (let i: number = 0; i < Game.start().TowerInstance.length; i++) {
@@ -2154,11 +2230,12 @@ export class MechanicalHuge extends Invator {
                         && Game.start().TowerInstance[i].pos <= this.state.pos + Game.start().getPadding(0) + Game.start().getSpan()) {
                     if (this.boomCD >= 14000) {
                         Game.start().TowerInstance[i].component.hurt(500, 0, 0, 0);
+                        Game.start().TowerInstance[i].component.ignite(50, 3000, 10);
                         this.boomCD = 0;
-                        this.waiting = 2000;
+                        this.waiting = 1500;
                     }
                     else {
-                        Game.start().TowerInstance[i].component.hurt(200, 0, 0, 0);
+                        Game.start().TowerInstance[i].component.hurt(220, 0, 0, 0);
                         this.waiting = 800;
                     }
                 }
@@ -2173,8 +2250,8 @@ export class MechanicalHuge extends Invator {
                     <image xmlns={`http://www.w3.org/2000/svg`}
                         x={Game.start().getMargin(3) + Game.start().getPadding(0) + this.state.pos}
                         y={Game.start().getMargin(0) + (this.props.arr + 0.5) * Game.start().getLineHeight()}
-                        width={`150px`} height={`150px`} ref={"dom"}
-                        transform={`translate(-136, -84)`}
+                        width={`180px`} height={`150px`} ref={"dom"}
+                        transform={`translate(-166, -84)`}
                         xlinkHref={require(`../pic/Invator/MechanicalHuge_die_0.png`)} />
                 </>
             )

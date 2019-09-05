@@ -13,7 +13,7 @@ const App: React.FC = () => {
   }
   return (
     <div className="App">
-      <Game map_pic={''} map_arr={6} map_cor={12} margin={[180, 0, 100, 0]} padding={[240, 120]} />
+      <Game map_pic={''} map_arr={5} map_cor={12} margin={[180, 0, 100, 0]} padding={[240, 120]} />
     </div>
   );
 }

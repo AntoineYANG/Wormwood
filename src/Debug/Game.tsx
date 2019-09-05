@@ -141,7 +141,7 @@ export class Game extends Component<props_game, state_game, any> {
 
     public static start(): Game {
         if (System === null) {
-            System = new Game({map_pic: '', map_arr: 6, map_cor: 12, margin: [180, 0, 100, 0], padding: [240, 120]});
+            System = new Game({map_pic: '', map_arr: 5, map_cor: 12, margin: [180, 0, 100, 0], padding: [240, 120]});
         }
         return System!;
     }
@@ -300,6 +300,10 @@ export class Game extends Component<props_game, state_game, any> {
     public componentDidMount(): void {
         this.init();
         setInterval(this.run, 2000);
+        for (let a: number = 0; a < 6; a++) {
+            this.appendTower(TowerDict.Adam, 1, a, 0);
+            this.appendTower(TowerDict.Eve, 2, a, 4);
+        }
     }
 
     public componentWillUnmount(): void {
@@ -371,34 +375,42 @@ export class Game extends Component<props_game, state_game, any> {
                 this.appendInvator(InvatorDict.Mechanical);
             }
         },
-        at32: () => {
+        at28: () => {
             this.appendInvator(InvatorDict.MechanicalPain);
+        },
+        at36: () => {
+            this.appendInvator(InvatorDict.MechanicalHuge);
         },
         at38: () => {
             this.appendInvator(InvatorDict.Mechanical);
             this.appendInvator(InvatorDict.MechanicalShooter);
         },
-        at40: () => {
-            this.appendInvator(InvatorDict.MechanicalHuge);
-        },
         at44: () => {
             for (let i: number = 0; i < 2; i++) {
                 this.appendInvator(InvatorDict.Mechanical);
             }
+        },
+        at46: () => {
             for (let i: number = 0; i < 2; i++) {
                 this.appendInvator(InvatorDict.MechanicalShooter);
             }
+            this.appendInvator(InvatorDict.MechanicalHuge);
         },
         at54: () => {
             this.appendInvator(InvatorDict.MechanicalShooter);
-            for (let i: number = 0; i < 3; i++) {
+            this.appendInvator(InvatorDict.MechanicalPain);
+        },
+        at56: () => {
+            for (let i: number = 0; i < 2; i++) {
                 this.appendInvator(InvatorDict.MechanicalPain);
             }
         },
-        at60: () => {
+        at64: () => {
             for (let i: number = 0; i < 3; i++) {
                 this.appendInvator(InvatorDict.Mechanical);
             }
+        },
+        at66: () => {
             for (let i: number = 0; i < 2; i++) {
                 this.appendInvator(InvatorDict.MechanicalShooter);
             }
@@ -408,18 +420,22 @@ export class Game extends Component<props_game, state_game, any> {
         },
         at74: () => {
             for (let i: number = 0; i < 3; i++) {
-                this.appendInvator(InvatorDict.Mechanical);
+                this.appendInvator(InvatorDict.MechanicalHuge);
             }
+        },
+        at76: () => {
             for (let i: number = 0; i < 2; i++) {
                 this.appendInvator(InvatorDict.MechanicalPain);
             }
         },
-        at76: () => {
+        at78: () => {
+            for (let i: number = 0; i < 2; i++) {
+                this.appendInvator(InvatorDict.Mechanical);
+            }
+        },
+        at80: () => {
             for (let i: number = 0; i < 3; i++) {
                 this.appendInvator(InvatorDict.MechanicalShooter);
-            }
-            for (let i: number = 0; i < 2; i++) {
-                this.appendInvator(InvatorDict.MechanicalHuge);
             }
             let check: () => void
                 = () => {
@@ -439,9 +455,20 @@ export class Game extends Component<props_game, state_game, any> {
     private went: number = 0;
 
     public run(): void {
+        if (this.state.enemies.length >= 6) {
+            return;
+        }
         this.went++;
         if (this.MB[`at${this.went}`]) {
             this.MB[`at${this.went}`]();
+            this.MB[`at${this.went}`] = () => {};
+        }
+        if (this.went >= 30 && this.state.enemies.length <= 3) {
+            this.went++;
+            if (this.MB[`at${this.went}`]) {
+                this.MB[`at${this.went}`]();
+                this.MB[`at${this.went}`] = () => {};
+            }
         }
     }
 }
